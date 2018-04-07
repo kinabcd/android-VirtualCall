@@ -1,0 +1,6 @@
+*.iml
+/build
+/captures
+
+.DS_Store
+.stfolder
