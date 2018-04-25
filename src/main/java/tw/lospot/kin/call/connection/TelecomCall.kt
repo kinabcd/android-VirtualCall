@@ -1,6 +1,8 @@
 package tw.lospot.kin.call.connection
 
+import android.telecom.Conferenceable
 import android.telecom.DisconnectCause
+import android.telecom.PhoneAccountHandle
 
 /**
  * Created by kin on 2018/2/28.
@@ -13,7 +15,11 @@ object TelecomCall {
 
     interface Common {
         var listener: Listener?
-        fun getState(): Int
+        val state: Int
+        val conferenceable: Conferenceable
+        val videoState: Int
+        val phoneAccountHandle: PhoneAccountHandle
+        fun answer(videoState: Int)
         fun unhold()
         fun hold()
         fun disconnect(disconnectCause: DisconnectCause)

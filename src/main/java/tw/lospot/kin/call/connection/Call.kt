@@ -1,6 +1,7 @@
 package tw.lospot.kin.call.connection
 
 import android.telecom.Conferenceable
+import android.telecom.Connection
 import android.telecom.DisconnectCause
 import android.telecom.VideoProfile
 import tw.lospot.kin.call.Log
@@ -17,6 +18,7 @@ class Call(val telecomCall: TelecomCall.Common) : TelecomCall.Listener {
 
     private val listeners = CopyOnWriteArraySet<Listener>()
     var id = callCount++
+    val phoneAccountHandle get() = telecomCall.phoneAccountHandle
 
     init {
         telecomCall.listener = this
@@ -49,10 +51,10 @@ class Call(val telecomCall: TelecomCall.Common) : TelecomCall.Listener {
     }
 
     fun getName(): String {
-        if (telecomCall is Conference) {
+        if (telecomCall is ConferenceProxy) {
             return "Conference Call"
-        } else if (telecomCall is Connection) {
-            return telecomCall.address.schemeSpecificPart
+        } else if (telecomCall is ConnectionProxy) {
+            return telecomCall.telecomConnection.address.schemeSpecificPart
         }
         return ""
     }
@@ -70,46 +72,47 @@ class Call(val telecomCall: TelecomCall.Common) : TelecomCall.Listener {
     }
 
     val state: Int
-        get() = telecomCall.getState()
+        get() = telecomCall.state
 
-    var conferenceable: List<Call> = emptyList()
+    var conferenceables: List<Call> = emptyList()
         set(calls) {
             field = when {
                 isConference -> calls.filter { !it.isConference && it != this }
                 else -> calls.filter { it != this }
             }
 
-            if (telecomCall is Conference) {
-                telecomCall.conferenceableConnections =
-                        conferenceable.map { it.telecomCall as Connection }
-            } else if (telecomCall is Connection) {
-                telecomCall.conferenceables =
-                        conferenceable.map { it.telecomCall as Conferenceable }
+            if (telecomCall is ConferenceProxy) {
+                telecomCall.telecomConference.conferenceableConnections =
+                        conferenceables.map { it.telecomCall.conferenceable as Connection }
+            } else if (telecomCall is ConnectionProxy) {
+                telecomCall.telecomConnection.conferenceables =
+                        conferenceables.map { it.telecomCall as Conferenceable }
             }
         }
 
     val hasParent: Boolean
-        get() = telecomCall is Connection && telecomCall.conference != null
+        get() = telecomCall is ConnectionProxy && telecomCall.telecomConnection.conference != null
 
     val children: List<Call>
         get() {
-            val children = ArrayList<Call>()
-            if (telecomCall is Conference) {
-                telecomCall.connections
-                        .map { it -> CallList.getCall(it as Connection) }
-                        .forEach { if (it != null) children.add(it) }
+            if (telecomCall !is ConferenceProxy) {
+                return emptyList()
             }
+            val children = ArrayList<Call>()
+            telecomCall.telecomConference.connections
+                    .map { it -> CallList.getCall(it) }
+                    .forEach { if (it != null) children.add(it) }
             return children
         }
 
     val isConference: Boolean
-        get() = telecomCall is Conference
+        get() = telecomCall is ConferenceProxy
 
     val isExternal: Boolean
         get() = telecomCall.isExternal()
 
     fun maybeDestroy() {
-        if (telecomCall is Conference) {
+        if (telecomCall is ConferenceProxy) {
             telecomCall.maybeDestroy()
         }
     }
@@ -127,28 +130,26 @@ class Call(val telecomCall: TelecomCall.Common) : TelecomCall.Listener {
     }
 
     fun answer() {
-        if (telecomCall is Connection) {
-            telecomCall.onAnswer(telecomCall.vState)
-        }
+        telecomCall.answer(telecomCall.videoState)
     }
 
     fun requestVideo(videoState: Int = VideoProfile.STATE_BIDIRECTIONAL) {
-        if (telecomCall is Connection && telecomCall.vState != videoState) {
+        if (telecomCall is ConnectionProxy && telecomCall.videoState != videoState) {
             val videoProfile = VideoProfile(videoState)
             Log.v(this, "requestVideo $videoProfile")
-            val isUpgrade = (telecomCall.vState.and(VideoProfile.STATE_RX_ENABLED) == 0 && videoState.and(VideoProfile.STATE_RX_ENABLED) != 0)
-                    || (telecomCall.vState.and(VideoProfile.STATE_TX_ENABLED) == 0 && videoState.and(VideoProfile.STATE_TX_ENABLED) != 0)
+            val isUpgrade = (telecomCall.videoState.and(VideoProfile.STATE_RX_ENABLED) == 0 && videoState.and(VideoProfile.STATE_RX_ENABLED) != 0)
+                    || (telecomCall.videoState.and(VideoProfile.STATE_TX_ENABLED) == 0 && videoState.and(VideoProfile.STATE_TX_ENABLED) != 0)
             if (isUpgrade) {
                 telecomCall.videoProvider.receiveSessionModifyRequest(videoProfile)
             } else {
-                telecomCall.vState = videoState
+                telecomCall.videoState = videoState
             }
         }
     }
 
     fun toggleRxVideo() {
-        if (telecomCall is Connection) {
-            val nowVideoState = telecomCall.vState
+        if (telecomCall is ConnectionProxy) {
+            val nowVideoState = telecomCall.videoState
             val newVideoState = nowVideoState xor VideoProfile.STATE_RX_ENABLED
             requestVideo(newVideoState)
         }

@@ -16,8 +16,8 @@ import tw.lospot.kin.call.units.Camera
  * Created by Kin_Lo on 2017/8/9.
  */
 
-class VideoProvider(val context: Context) : android.telecom.Connection.VideoProvider() {
-    var connection: Connection? = null
+class VideoProvider(private val context: Context) : android.telecom.Connection.VideoProvider() {
+    var connection: ConnectionProxy? = null
     var previewSurface: Surface? = null
     var displaySurface: Surface? = null
     var camera: Camera? = null
@@ -95,14 +95,14 @@ class VideoProvider(val context: Context) : android.telecom.Connection.VideoProv
         if (toProfile == null) {
             return
         }
-        val delayTime = when (connection!!.vState) {
+        val delayTime = when (connection!!.videoState) {
             VideoProfile.STATE_AUDIO_ONLY -> 3000L
             else -> 100L
         }
 
         Handler().postDelayed({
             receiveSessionModifyResponse(SESSION_MODIFY_REQUEST_SUCCESS, fromProfile, toProfile)
-            connection?.vState = toProfile.videoState
+            connection?.videoState = toProfile.videoState
         }, delayTime)
     }
 
@@ -121,6 +121,6 @@ class VideoProvider(val context: Context) : android.telecom.Connection.VideoProv
         if (responseProfile == null) {
             return
         }
-        connection?.vState = responseProfile.videoState
+        connection?.videoState = responseProfile.videoState
     }
 }

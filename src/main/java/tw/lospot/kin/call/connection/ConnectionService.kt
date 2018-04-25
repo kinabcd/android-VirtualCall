@@ -20,27 +20,29 @@ class ConnectionService : android.telecom.ConnectionService() {
     }
 
     override fun onCreateIncomingConnection(connectionManagerPhoneAccount: PhoneAccountHandle, request: ConnectionRequest): android.telecom.Connection {
-        val connection = Connection(applicationContext, request.address, request.accountHandle)
-        connection.vState = request.extras.getInt(EXTRA_INCOMING_VIDEO_STATE, VideoProfile.STATE_AUDIO_ONLY)
+        val connection = ConnectionProxy(applicationContext, request.address, request.accountHandle)
+        connection.videoState = request.extras.getInt(EXTRA_INCOMING_VIDEO_STATE, VideoProfile.STATE_AUDIO_ONLY)
         CallList.onCallAdded(Call(connection))
-        connection.setRinging()
-        return connection
+        connection.telecomConnection.setRinging()
+        return connection.telecomConnection
     }
 
     override fun onCreateOutgoingConnection(connectionManagerPhoneAccount: PhoneAccountHandle, request: ConnectionRequest): android.telecom.Connection {
-        val connection = Connection(applicationContext, request.address, request.accountHandle)
-        connection.vState = request.extras.getInt(EXTRA_START_CALL_WITH_VIDEO_STATE, VideoProfile.STATE_AUDIO_ONLY)
+        val connection = ConnectionProxy(applicationContext, request.address, request.accountHandle)
+        connection.videoState = request.extras.getInt(EXTRA_START_CALL_WITH_VIDEO_STATE, VideoProfile.STATE_AUDIO_ONLY)
         CallList.onCallAdded(Call(connection))
-        connection.setDialing()
-        return connection
+        connection.telecomConnection.setDialing()
+        return connection.telecomConnection
     }
 
     override fun onConference(connection1: android.telecom.Connection, connection2: android.telecom.Connection) {
-        val conference = Conference(applicationContext, (connection1 as Connection).phoneAccountHandle)
-        conference.addConnection(connection1)
-        conference.addConnection(connection2)
-        addConference(conference)
-        conference.setActive()
+        val phoneAccountHandle = CallList.getCall(connection1)?.phoneAccountHandle
+                ?: CallList.getCall(connection2)?.phoneAccountHandle
+                ?: PhoneAccountHelper(applicationContext).phoneAccountHandle
+        val conference = ConferenceProxy(applicationContext, phoneAccountHandle)
+        conference.telecomConference.addConnection(connection1)
+        conference.telecomConference.addConnection(connection2)
+        addConference(conference.telecomConference)
         CallList.onCallAdded(Call(conference))
         Log.d(this, "onConference")
     }

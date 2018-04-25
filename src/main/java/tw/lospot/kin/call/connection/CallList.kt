@@ -1,5 +1,6 @@
 package tw.lospot.kin.call.connection
 
+import android.telecom.Conferenceable
 import android.telecom.Connection
 import tw.lospot.kin.call.Log
 import java.util.concurrent.CopyOnWriteArraySet
@@ -11,6 +12,7 @@ import java.util.concurrent.CopyOnWriteArraySet
 object CallList {
     private const val TAG = "CallList"
     private val sCalls = CopyOnWriteArraySet<Call>()
+    private val sCallsByConferencable = HashMap<Conferenceable, Call>()
     private val sCallsByTelecomCall = HashMap<TelecomCall.Common, Call>()
     private val sListeners = CopyOnWriteArraySet<Listener>()
     private fun notifyCallListChanged() {
@@ -31,6 +33,7 @@ object CallList {
         Log.d(TAG, "onCallAdded $call")
         sCalls.add(call)
         sCallsByTelecomCall[call.telecomCall] = call
+        sCallsByConferencable[call.telecomCall.conferenceable] = call
         call.addListener(CallListener)
         notifyCallListChanged()
     }
@@ -39,6 +42,7 @@ object CallList {
         Log.d(TAG, "onCallRemoved $call")
         sCalls.remove(call)
         sCallsByTelecomCall.remove(call.telecomCall)
+        sCallsByConferencable.remove(call.telecomCall.conferenceable)
         call.removeListener(CallListener)
         getAllCalls().forEach { it.maybeDestroy() }
         notifyCallListChanged()
@@ -48,7 +52,7 @@ object CallList {
 
     fun isTracking(call: Call): Boolean = sCalls.contains(call)
 
-    fun getCall(telecomCall: TelecomCall.Common): Call? = sCallsByTelecomCall[telecomCall]
+    fun getCall(conferenceable: Conferenceable): Call? = sCallsByConferencable[conferenceable]
 
     fun onStateChanged(call: Call, newState: Int) {
         if (!isTracking(call) && call.state != Connection.STATE_DISCONNECTED) {
@@ -67,7 +71,7 @@ object CallList {
 
         val allConferenceableCall = getAllCalls().filter { !it.hasParent && !it.isExternal }
         allConferenceableCall.forEach {
-            it.conferenceable = allConferenceableCall
+            it.conferenceables = allConferenceableCall
         }
         notifyCallListChanged()
     }
