@@ -86,7 +86,7 @@ class Call(val telecomCall: TelecomCall.Common) : TelecomCall.Listener {
                         conferenceables.map { it.telecomCall.conferenceable as Connection }
             } else if (telecomCall is ConnectionProxy) {
                 telecomCall.telecomConnection.conferenceables =
-                        conferenceables.map { it.telecomCall as Conferenceable }
+                        conferenceables.map { it.telecomCall.conferenceable }
             }
         }
 
