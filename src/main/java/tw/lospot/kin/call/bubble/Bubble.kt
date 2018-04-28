@@ -7,7 +7,6 @@ import android.content.res.ColorStateList
 import android.graphics.PixelFormat
 import android.graphics.drawable.Icon
 import android.os.Build
-import android.provider.Settings
 import android.telecom.Connection.*
 import android.view.Gravity.END
 import android.view.Gravity.TOP
@@ -17,7 +16,6 @@ import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
 import android.view.WindowManager.LayoutParams.TYPE_PHONE
-import android.widget.ImageView
 import kotlinx.android.synthetic.main.bubble.view.*
 import tw.lospot.kin.call.Log
 import tw.lospot.kin.call.R
@@ -26,16 +24,18 @@ import tw.lospot.kin.call.connection.Call
 /**
  * Created by Kin_Lo on 2018/2/27.
  */
-class Bubble(val context: Context, private val call: Call) : Call.Listener {
+class Bubble(context: Context, private val call: Call) : Call.Listener {
 
     enum class State {
         NONE, SHOWN, EXPANDED
     }
 
-    class Action(val icon: Icon, val callback: Runnable)
-
     private val windowManager = context.getSystemService(WindowManager::class.java)
-    private val rootView by lazy { LayoutInflater.from(context).inflate(R.layout.bubble, null, false) }
+    private val layoutInflater = LayoutInflater.from(context)
+    private val packageName = context.packageName
+    private val actionsView = BubbleActionBox(context)
+
+    private val rootView by lazy { layoutInflater.inflate(R.layout.bubble, null, false) }
     private val rootParam by lazy {
         WindowManager.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -61,13 +61,6 @@ class Bubble(val context: Context, private val call: Call) : Call.Listener {
         }
         rootView.callId
     }
-    private val actionsView by lazy {
-        arrayOf<ImageView>(
-                rootView.action1,
-                rootView.action2,
-                rootView.action3
-        )
-    }
     private var targetState = State.NONE
     private var state = State.NONE
     private var pending = false
@@ -92,10 +85,6 @@ class Bubble(val context: Context, private val call: Call) : Call.Listener {
         }
 
     fun show() {
-        if (!Settings.canDrawOverlays(context)) {
-            Log.v(this, "show checkSelfPermission failed")
-            return
-        }
         Log.v(this, "show $call")
         setTargetState(State.SHOWN)
     }
@@ -112,8 +101,10 @@ class Bubble(val context: Context, private val call: Call) : Call.Listener {
     }
 
     private fun collapse() {
-        Log.v(this, "collapse $call")
-        setTargetState(State.SHOWN)
+        if (targetState == State.EXPANDED) {
+            Log.v(this, "collapse $call")
+            setTargetState(State.SHOWN)
+        }
     }
 
     private fun setState(state: State) {
@@ -161,33 +152,38 @@ class Bubble(val context: Context, private val call: Call) : Call.Listener {
         windowManager.addView(rootView, rootParam)
         call.addListener(this)
         isViewAdded = true
-        animateMoveForX(idView.measuredWidth - rootView.measuredWidth, Runnable {
+        animateMoveForX(idView.measuredWidth - rootView.measuredWidth) {
             setState(State.SHOWN)
-        })
+        }
     }
 
     private fun startHide() {
-        animateMoveForX(-rootView.measuredWidth, Runnable {
+        animateMoveForX(-rootView.measuredWidth) {
             windowManager.removeView(rootView)
             call.removeListener(this)
             isViewAdded = false
             setState(State.NONE)
-        })
+        }
     }
 
     private fun startExpand() {
-        animateMoveForX(0, Runnable {
-            setState(State.EXPANDED)
-        })
+        animateMoveForX((actionsView.width - rootView.width) / 2) {
+            actionsView.y = y + rootView.height
+            actionsView.show {
+                setState(State.EXPANDED)
+            }
+        }
     }
 
     private fun startCollapse() {
-        animateMoveForX(idView.measuredWidth - rootView.measuredWidth, Runnable {
-            setState(State.SHOWN)
-        })
+        actionsView.hide {
+            animateMoveForX(idView.measuredWidth - rootView.measuredWidth) {
+                setState(State.SHOWN)
+            }
+        }
     }
 
-    private fun animateMoveForX(targetX: Int, endCallback: Runnable) {
+    private fun animateMoveForX(targetX: Int, endCallback: () -> Unit) {
         val animator = ValueAnimator.ofInt(x, targetX)
         animator.addUpdateListener {
             x = it.animatedValue as Int
@@ -199,7 +195,7 @@ class Bubble(val context: Context, private val call: Call) : Call.Listener {
             override fun onAnimationEnd(animation: Animator?) {
                 rootParam.x = targetX
                 windowManager.updateViewLayout(rootView, rootParam)
-                endCallback.run()
+                endCallback()
             }
 
             override fun onAnimationCancel(animation: Animator?) {
@@ -212,28 +208,11 @@ class Bubble(val context: Context, private val call: Call) : Call.Listener {
         animator.start()
     }
 
-    private fun setAction(actions: List<Action>) {
-        actionsView.forEachIndexed { index, imageView ->
-            if (index < actions.size) {
-                imageView.setOnClickListener {
-                    actions[index].callback.run()
-                }
-                imageView.visibility = View.VISIBLE
-                imageView.setImageIcon(actions[index].icon)
-            } else {
-                imageView.setOnClickListener {
-                }
-                imageView.visibility = View.INVISIBLE
-                imageView.setImageDrawable(null)
-            }
-        }
-    }
-
     private fun updateViews() {
         idView.text = call.id.toString()
         if (call.isExternal) {
             idView.backgroundTintList = ColorStateList.valueOf(0xffAAAAAA.toInt())
-            setAction(ArrayList(0))
+            actionsView.actions = emptyList()
         } else {
             idView.backgroundTintList = ColorStateList.valueOf(when (call.state) {
                 STATE_INITIALIZING -> 0xffCCCCCC.toInt()
@@ -246,22 +225,21 @@ class Bubble(val context: Context, private val call: Call) : Call.Listener {
                 STATE_PULLING_CALL -> 0xffFF0000.toInt()
                 else -> 0xffffffff.toInt()
             })
-            setAction(
-                    when (call.state) {
-                        STATE_RINGING -> {
-                            arrayListOf(gerDisconnectAction())
-                        }
-                        STATE_DIALING -> {
-                            arrayListOf(gerAnswerAction(), gerDisconnectAction())
-                        }
-                        STATE_ACTIVE -> {
-                            arrayListOf(gerDisconnectAction(), gerPushAction())
-                        }
-                        STATE_HOLDING -> {
-                            arrayListOf(gerDisconnectAction())
-                        }
-                        else -> ArrayList(0)
-                    })
+            actionsView.actions = when (call.state) {
+                STATE_RINGING -> {
+                    arrayListOf(gerDisconnectAction())
+                }
+                STATE_DIALING -> {
+                    arrayListOf(gerAnswerAction(), gerDisconnectAction())
+                }
+                STATE_ACTIVE -> {
+                    arrayListOf(gerPushAction(), gerDisconnectAction())
+                }
+                STATE_HOLDING -> {
+                    arrayListOf(gerDisconnectAction())
+                }
+                else -> ArrayList(0)
+            }
         }
     }
 
@@ -269,21 +247,27 @@ class Bubble(val context: Context, private val call: Call) : Call.Listener {
         updateViews()
     }
 
-    private fun gerAnswerAction(): Action {
-        return Action(Icon.createWithResource(context, android.R.drawable.ic_menu_call), Runnable {
+    private fun gerAnswerAction(): BubbleAction {
+        return BubbleAction(Icon.createWithResource(packageName, android.R.drawable.ic_menu_call),
+                "Answer", {
             call.answer()
+            collapse()
         })
     }
 
-    private fun gerDisconnectAction(): Action {
-        return Action(Icon.createWithResource(context, android.R.drawable.ic_delete), Runnable {
+    private fun gerDisconnectAction(): BubbleAction {
+        return BubbleAction(Icon.createWithResource(packageName, android.R.drawable.ic_delete),
+                "Disconnect", {
             call.disconnect()
+            collapse()
         })
     }
 
-    private fun gerPushAction(): Action {
-        return Action(Icon.createWithResource(context, android.R.drawable.stat_sys_upload), Runnable {
+    private fun gerPushAction(): BubbleAction {
+        return BubbleAction(Icon.createWithResource(packageName, android.R.drawable.stat_sys_upload),
+                "Push to External", {
             call.push()
+            collapse()
         })
     }
 }

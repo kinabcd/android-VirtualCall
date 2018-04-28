@@ -2,7 +2,6 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
               android:layout_width="wrap_content"
               android:layout_height="48dp"
-              android:background="@drawable/bubble_background"
               android:minWidth="64dp"
               android:orientation="horizontal">
 
@@ -11,24 +10,5 @@
         android:layout_width="48dp"
         android:layout_height="48dp"
         android:background="@drawable/bubble_id_background"
-        android:foreground="@drawable/bubble_id_foreground"
         android:gravity="center"/>
-
-    <ImageView
-        android:id="@+id/action1"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:tint="#999"/>
-
-    <ImageView
-        android:id="@+id/action2"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:tint="#999"/>
-
-    <ImageView
-        android:id="@+id/action3"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:tint="#999"/>
 </LinearLayout>

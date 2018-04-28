@@ -1,6 +1,7 @@
 package tw.lospot.kin.call.bubble
 
 import android.content.Context
+import android.provider.Settings
 import android.util.TypedValue
 import tw.lospot.kin.call.connection.Call
 import tw.lospot.kin.call.connection.CallList
@@ -22,17 +23,20 @@ class BubbleList(val context: Context) : CallList.Listener {
                 iterator.remove()
             }
         }
-        liveCalls.forEach {
-            if (!it.hasParent && !bubbles.containsKey(it)) {
-                bubbles[it] = Bubble(context, it)
-                bubbles[it]!!.show()
+
+        if (Settings.canDrawOverlays(context)) {
+            liveCalls.forEach {
+                if (!it.hasParent && !bubbles.containsKey(it)) {
+                    bubbles[it] = Bubble(context, it)
+                    bubbles[it]!!.show()
+                }
             }
-        }
-        var count = 1
-        liveCalls.forEach {
-            if (bubbles.containsKey(it)) {
-                bubbles[it]!!.y = (count * TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 64f, context.resources.displayMetrics)).toInt()
-                count += 1
+            var count = 1
+            liveCalls.forEach {
+                if (bubbles.containsKey(it)) {
+                    bubbles[it]!!.y = (count * TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 64f, context.resources.displayMetrics)).toInt()
+                    count += 1
+                }
             }
         }
     }
