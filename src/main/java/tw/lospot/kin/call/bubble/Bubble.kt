@@ -212,7 +212,7 @@ class Bubble(context: Context, private val call: Call) : Call.Listener {
         idView.text = call.id.toString()
         if (call.isExternal) {
             idView.backgroundTintList = ColorStateList.valueOf(0xffAAAAAA.toInt())
-            actionsView.actions = emptyList()
+            actionsView.actions = arrayListOf(gerDisconnectAction())
         } else {
             idView.backgroundTintList = ColorStateList.valueOf(when (call.state) {
                 STATE_INITIALIZING -> 0xffCCCCCC.toInt()
@@ -238,7 +238,7 @@ class Bubble(context: Context, private val call: Call) : Call.Listener {
                 STATE_HOLDING -> {
                     arrayListOf(gerDisconnectAction())
                 }
-                else -> ArrayList(0)
+                else -> emptyList()
             }
         }
     }
