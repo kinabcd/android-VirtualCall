@@ -5,6 +5,7 @@ import android.graphics.PixelFormat
 import android.os.Build
 import android.support.v7.widget.LinearLayoutManager
 import android.view.*
+import android.view.animation.DecelerateInterpolator
 import kotlinx.android.synthetic.main.bubble_action_box.view.*
 import tw.lospot.kin.call.R
 
@@ -62,10 +63,19 @@ class BubbleActionBox(context: Context) {
 
     fun show(callback: () -> Unit = {}) {
         if (!isShowing) {
+            isShowing = true
             rootParam.gravity = Gravity.TOP or Gravity.END
             windowManager.addView(rootView, rootParam)
-            isShowing = true
-            callback()
+            rootView.scaleX = 0f
+            rootView.scaleY = 0f
+            rootView.animate()
+                    .setDuration(100)
+                    .setInterpolator(DecelerateInterpolator())
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .withEndAction {
+                        callback()
+                    }
         }
     }
 

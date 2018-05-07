@@ -16,6 +16,7 @@ import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
 import android.view.WindowManager.LayoutParams.TYPE_PHONE
+import android.view.animation.OvershootInterpolator
 import kotlinx.android.synthetic.main.bubble.view.*
 import tw.lospot.kin.call.Log
 import tw.lospot.kin.call.R
@@ -184,28 +185,30 @@ class Bubble(context: Context, private val call: Call) : Call.Listener {
     }
 
     private fun animateMoveForX(targetX: Int, endCallback: () -> Unit) {
-        val animator = ValueAnimator.ofInt(x, targetX)
-        animator.addUpdateListener {
-            x = it.animatedValue as Int
-        }
-        animator.addListener(object : Animator.AnimatorListener {
-            override fun onAnimationStart(animation: Animator?) {
+        ValueAnimator.ofInt(x, targetX).apply {
+            addUpdateListener {
+                x = it.animatedValue as Int
             }
+            addListener(object : Animator.AnimatorListener {
+                override fun onAnimationStart(animation: Animator?) {
+                }
 
-            override fun onAnimationEnd(animation: Animator?) {
-                rootParam.x = targetX
-                windowManager.updateViewLayout(rootView, rootParam)
-                endCallback()
-            }
+                override fun onAnimationEnd(animation: Animator?) {
+                    rootParam.x = targetX
+                    windowManager.updateViewLayout(rootView, rootParam)
+                    endCallback()
+                }
 
-            override fun onAnimationCancel(animation: Animator?) {
-                onAnimationEnd(animation)
-            }
+                override fun onAnimationCancel(animation: Animator?) {
+                    onAnimationEnd(animation)
+                }
 
-            override fun onAnimationRepeat(animation: Animator?) {
-            }
-        })
-        animator.start()
+                override fun onAnimationRepeat(animation: Animator?) {
+                }
+            })
+            interpolator = OvershootInterpolator()
+            duration = 200
+        }.start()
     }
 
     private fun updateViews() {
