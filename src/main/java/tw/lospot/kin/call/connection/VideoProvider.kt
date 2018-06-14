@@ -21,7 +21,6 @@ class VideoProvider(private val context: Context) : android.telecom.Connection.V
     var previewSurface: Surface? = null
     var displaySurface: Surface? = null
     var camera: Camera? = null
-    var videoState: Int = VideoProfile.STATE_AUDIO_ONLY
     private var mediaPlayer = MediaPlayer.create(context, R.raw.jino)
     override fun onSetPreviewSurface(surface: Surface?) {
         Log.v(this, "onSetPreviewSurface $surface")

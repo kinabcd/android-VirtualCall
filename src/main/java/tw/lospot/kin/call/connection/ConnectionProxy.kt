@@ -1,6 +1,8 @@
 package tw.lospot.kin.call.connection
 
 
+import android.annotation.TargetApi
+import android.bluetooth.BluetoothDevice
 import android.content.Context
 import android.net.Uri
 import android.os.Build
@@ -15,18 +17,25 @@ import tw.lospot.kin.call.Log
  * Created by Kin_Lo on 2017/8/9.
  */
 
-class ConnectionProxy(context: Context, address: Uri, override val phoneAccountHandle: PhoneAccountHandle) :
+class ConnectionProxy(context: Context, request: ConnectionRequest) :
         TelecomCall.Common {
-    val videoProvider = VideoProvider(context)
+    companion object {
+        const val TAG = "ConnectionProxy"
+    }
+
     val telecomConnection = object : Connection() {
         init {
-            setAddress(address, TelecomManager.PRESENTATION_ALLOWED)
+            setAddress(request.address, TelecomManager.PRESENTATION_ALLOWED)
             connectionCapabilities = connectionCapabilities
                     .or(CAPABILITY_SUPPORT_HOLD)
                     .or(CAPABILITY_HOLD)
                     .or(CAPABILITY_MUTE)
                     .or(CAPABILITY_RESPOND_VIA_TEXT)
                     .or(CAPABILITY_CANNOT_DOWNGRADE_VIDEO_TO_AUDIO)
+            if (request.isRequestingRtt) {
+                connectionProperties = connectionProperties
+                        .or(PROPERTY_IS_RTT)
+            }
         }
 
         override fun onStateChanged(state: Int) {
@@ -67,7 +76,7 @@ class ConnectionProxy(context: Context, address: Uri, override val phoneAccountH
 
         override fun onCallEvent(event: String, extras: Bundle) {
             super.onCallEvent(event, extras)
-            Log.v(this, "onCallEvent $event")
+            Log.v(TAG, "onCallEvent $event")
         }
 
         override fun onPullExternalCall() {
@@ -75,37 +84,116 @@ class ConnectionProxy(context: Context, address: Uri, override val phoneAccountH
         }
 
         override fun onExtrasChanged(extras: Bundle) {
-            Log.v(this, "onExtrasChanged $extras")
+            Log.v(TAG, "onExtrasChanged $extras")
         }
 
         override fun sendConnectionEvent(event: String, extras: Bundle) {
-            super.sendConnectionEvent(event, extras)
-            Log.v(this, "sendConnectionEvent $event $extras")
+            Log.v(TAG, "sendConnectionEvent $event $extras")
         }
 
         override fun onPlayDtmfTone(c: Char) {
+            Log.v(TAG, "onPlayDtmfTone $c")
             listener?.onPlayDtmfTone(c)
         }
 
+        override fun onStopDtmfTone() {
+            Log.v(TAG, "onStopDtmfTone")
+            super.onStopDtmfTone()
+        }
+
         override fun onSeparate() {
+            Log.v(TAG, "onSeparate")
+        }
+
+        override fun onCallAudioStateChanged(state: CallAudioState?) {
+            Log.v(TAG, "onCallAudioStateChanged $state")
+        }
+
+        override fun onShowIncomingCallUi() {
+            Log.v(TAG, "onShowIncomingCallUi")
+        }
+
+        override fun onPostDialContinue(proceed: Boolean) {
+            Log.v(TAG, "onPostDialContinue")
+        }
+
+        override fun onDeflect(address: Uri?) {
+            Log.v(TAG, "onDeflect")
+        }
+
+        override fun onHandoverComplete() {
+            Log.v(TAG, "onHandoverComplete")
+        }
+
+        override fun requestBluetoothAudio(bluetoothDevice: BluetoothDevice?) {
+            Log.v(TAG, "requestBluetoothAudio $bluetoothDevice")
+        }
+
+        @TargetApi(28)
+        override fun handleRttUpgradeResponse(rttTextStream: RttTextStream?) {
+            Log.v(TAG, "handleRttUpgradeResponse $rttTextStream")
+            rttTextStream?.let {
+                this@ConnectionProxy.rttTextStream = it
+                connectionProperties = connectionProperties.or(PROPERTY_IS_RTT)
+            }
+        }
+
+        @TargetApi(28)
+        override fun onStartRtt(rttTextStream: RttTextStream) {
+            Log.v(TAG, "onStartRtt $rttTextStream")
+            this@ConnectionProxy.rttTextStream = rttTextStream
+            connectionProperties = connectionProperties.or(PROPERTY_IS_RTT)
+            sendRttInitiationSuccess()
+        }
+
+        @TargetApi(28)
+        override fun onStopRtt() {
+            Log.v(TAG, "onStopRtt")
+            this@ConnectionProxy.rttTextStream = null
+            connectionProperties = connectionProperties.and(PROPERTY_IS_RTT.inv())
         }
     }
 
-    init {
-        videoProvider.connection = this
-        telecomConnection.videoProvider = videoProvider
-    }
 
+    override val phoneAccountHandle: PhoneAccountHandle = request.accountHandle
+    private var rttTextStream: RttTextStream? = null
+        set(value) {
+            if (field != value) {
+                field = value
+                rttRobot = if (value != null) {
+                    RttRobot(value)
+                } else {
+                    null
+                }
+            }
+        }
+    private var rttRobot: RttRobot? = null
+        set(value) {
+            field?.stop()
+            field = value
+            field?.start()
+        }
+    val videoProvider = VideoProvider(context)
     override var listener: TelecomCall.Listener? = null
 
     override val conferenceable: Conferenceable get() = telecomConnection
     override val state: Int get() = telecomConnection.state
-    override var videoState: Int
-        get() = videoProvider.videoState
+    override var videoState: Int = VideoProfile.STATE_AUDIO_ONLY
         set(value) {
+            field = value
             telecomConnection.setVideoState(value)
-            videoProvider.videoState = value
         }
+
+    init {
+        Log.v(TAG, "request=$request")
+        videoProvider.connection = this
+        telecomConnection.videoProvider = videoProvider
+        videoState = request.extras.getInt(TelecomManager.EXTRA_START_CALL_WITH_VIDEO_STATE, VideoProfile.STATE_AUDIO_ONLY)
+        if (Build.VERSION.SDK_INT >= 28 && request.isRequestingRtt) {
+            rttTextStream = request.rttTextStream
+            Log.v(TAG, "isRequestingRtt=${request.isRequestingRtt}, rttTextStream=${request.rttTextStream}")
+        }
+    }
 
     private fun notifyStateChanged() {
         telecomConnection.connectionCapabilities = when (state) {
@@ -138,6 +226,7 @@ class ConnectionProxy(context: Context, address: Uri, override val phoneAccountH
 
     override fun disconnect(disconnectCause: DisconnectCause) {
         videoState = VideoProfile.STATE_AUDIO_ONLY
+        rttTextStream = null
         videoProvider.onSetPreviewSurface(null)
         videoProvider.onSetDisplaySurface(null)
         telecomConnection.setDisconnected(disconnectCause)
@@ -170,6 +259,12 @@ class ConnectionProxy(context: Context, address: Uri, override val phoneAccountH
             telecomConnection.connectionProperties = telecomConnection.connectionProperties
                     .or(Connection.PROPERTY_IS_EXTERNAL_CALL)
             notifyStateChanged()
+        }
+    }
+
+    override fun requestRtt() {
+        if (Build.VERSION.SDK_INT >= 28) {
+            telecomConnection.sendRemoteRttRequest()
         }
     }
 }

@@ -20,16 +20,14 @@ class ConnectionService : android.telecom.ConnectionService() {
     }
 
     override fun onCreateIncomingConnection(connectionManagerPhoneAccount: PhoneAccountHandle, request: ConnectionRequest): android.telecom.Connection {
-        val connection = ConnectionProxy(applicationContext, request.address, request.accountHandle)
-        connection.videoState = request.extras.getInt(EXTRA_INCOMING_VIDEO_STATE, VideoProfile.STATE_AUDIO_ONLY)
+        val connection = ConnectionProxy(applicationContext, request)
         CallList.onCallAdded(Call(connection))
         connection.telecomConnection.setRinging()
         return connection.telecomConnection
     }
 
     override fun onCreateOutgoingConnection(connectionManagerPhoneAccount: PhoneAccountHandle, request: ConnectionRequest): android.telecom.Connection {
-        val connection = ConnectionProxy(applicationContext, request.address, request.accountHandle)
-        connection.videoState = request.extras.getInt(EXTRA_START_CALL_WITH_VIDEO_STATE, VideoProfile.STATE_AUDIO_ONLY)
+        val connection = ConnectionProxy(applicationContext, request)
         CallList.onCallAdded(Call(connection))
         connection.telecomConnection.setDialing()
         return connection.telecomConnection

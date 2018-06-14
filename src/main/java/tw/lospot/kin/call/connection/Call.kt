@@ -1,6 +1,5 @@
 package tw.lospot.kin.call.connection
 
-import android.telecom.Conferenceable
 import android.telecom.Connection
 import android.telecom.DisconnectCause
 import android.telecom.VideoProfile
@@ -29,10 +28,10 @@ class Call(val telecomCall: TelecomCall.Common) : TelecomCall.Listener {
     }
 
     override fun onPlayDtmfTone(c: Char) {
-        if (c == '1') {
-            toggleRxVideo()
-        } else if (c == '2') {
-            push()
+        when (c) {
+            '1' -> toggleRxVideo()
+            '2' -> push()
+            '3' -> requestRtt()
         }
     }
 
@@ -153,5 +152,9 @@ class Call(val telecomCall: TelecomCall.Common) : TelecomCall.Listener {
             val newVideoState = nowVideoState xor VideoProfile.STATE_RX_ENABLED
             requestVideo(newVideoState)
         }
+    }
+
+    fun requestRtt() {
+        telecomCall.requestRtt()
     }
 }

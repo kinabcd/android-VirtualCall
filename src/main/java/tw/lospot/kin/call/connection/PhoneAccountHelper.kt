@@ -33,12 +33,14 @@ class PhoneAccountHelper(context: Context, private val address: String = "defaul
 
     val isRegistered get() = phoneAccount != null
     val isEnabled get() = isRegistered && phoneAccount!!.isEnabled
+    val isSelfManaged get() = isRegistered && phoneAccount!!.hasCapabilities(PhoneAccount.CAPABILITY_SELF_MANAGED)
 
     fun register() {
         val newPhoneAccount = PhoneAccount.builder(phoneAccountHandle, "LoSpot Telecom")
                 .setCapabilities(PhoneAccount.CAPABILITY_CALL_PROVIDER
                         .or(PhoneAccount.CAPABILITY_CONNECTION_MANAGER)
                         .or(PhoneAccount.CAPABILITY_VIDEO_CALLING)
+                        .or(PhoneAccount.CAPABILITY_RTT)
                 )
                 .addSupportedUriScheme(PhoneAccount.SCHEME_SIP)
                 .addSupportedUriScheme(PhoneAccount.SCHEME_TEL)
@@ -87,6 +89,7 @@ class PhoneAccountHelper(context: Context, private val address: String = "defaul
         val extras = Bundle()
         extras.putParcelable(TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE, phoneAccountHandle)
         extras.putInt(TelecomManager.EXTRA_START_CALL_WITH_VIDEO_STATE, videoState)
+
 
         val telecomManager = context.getSystemService(TelecomManager::class.java)
         telecomManager!!.placeCall(uri, extras)

@@ -26,5 +26,6 @@ object TelecomCall {
         fun isExternal(): Boolean
         fun pullExternalCall()
         fun pushInternalCall()
+        fun requestRtt()
     }
 }

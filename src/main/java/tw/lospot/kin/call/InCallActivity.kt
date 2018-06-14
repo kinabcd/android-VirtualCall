@@ -117,7 +117,7 @@ class InCallActivity : Activity(),
             R.id.registerPhoneAccount -> run {
                 mDefaultPhoneAccount.register()
                 updateView()
-                if (mDefaultPhoneAccount.isRegistered) {
+                if (mDefaultPhoneAccount.isRegistered && !mDefaultPhoneAccount.isSelfManaged) {
                     val intent = Intent()
                     intent.setClassName(TELECOM_PACKAGE_NAME, ENABLE_ACCOUNT_PREFERENCE)
                     if (packageManager.queryIntentActivities(intent, 0).size > 0) {

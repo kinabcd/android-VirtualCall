@@ -143,6 +143,9 @@ class ConferenceProxy(val context: Context, override val phoneAccountHandle: Pho
         telecomConference.destroy()
     }
 
+    override fun requestRtt() {
+    }
+
     private fun removeDisconnectedChildren() {
         telecomConference.connections
                 .filter { it.state == STATE_DISCONNECTED }
