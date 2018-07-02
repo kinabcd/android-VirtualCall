@@ -2,42 +2,51 @@ package tw.lospot.kin.call
 
 import android.Manifest
 import android.app.Activity
+import android.app.AlertDialog
+import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
-import android.telecom.TelecomManager
+import android.support.v7.widget.LinearLayoutManager
+import android.support.v7.widget.RecyclerView
 import android.telecom.VideoProfile
 import android.text.Editable
 import android.view.View
-import kotlinx.android.synthetic.main.activity_in_call.*
+import android.widget.EditText
+import android.widget.ImageView
 import tw.lospot.kin.call.connection.CallList
-import tw.lospot.kin.call.connection.PhoneAccountHelper
+import tw.lospot.kin.call.phoneaccount.PhoneAccountManager
 
 class InCallActivity : Activity(),
-        View.OnClickListener,
-        View.OnLongClickListener,
-        CallList.Listener {
+        CallList.Listener,
+        PhoneAccountManager.Listener,
+        View.OnClickListener {
 
     companion object {
-        private const val TELECOM_PACKAGE_NAME = "com.android.server.telecom"
-        private const val ENABLE_ACCOUNT_PREFERENCE = "com.android.server.telecom.settings.EnableAccountPreferenceActivity"
         private const val PREFERENCE_LAST_NUMBER = "last_number"
     }
 
     private val mPreferences by lazy { getSharedPreferences("Connection", MODE_PRIVATE) }
-    private val mDefaultPhoneAccount by lazy { PhoneAccountHelper(this) }
+    private val mDefaultPhoneAccount get() = mAdapter.accounts.firstOrNull { it.isEnabled }
+
+    private val phoneNumber by lazy { findViewById<EditText>(R.id.phoneNumber) }
+
+    private val mAdapter by lazy { InCallAdapter() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_in_call)
-        registerPhoneAccount.setOnClickListener(this)
-        registerPhoneAccount.setOnLongClickListener(this)
-        addIncomingCall.setOnClickListener(this)
-        addOutgoingCall.setOnClickListener(this)
-        addIncomingVideoCall.setOnClickListener(this)
-        addOutgoingVideoCall.setOnClickListener(this)
+        val callList = findViewById<RecyclerView>(R.id.callList)
+        callList.adapter = mAdapter
+        callList.layoutManager = LinearLayoutManager(this)
+
+        findViewById<ImageView>(R.id.addIncomingCall).setOnClickListener(this)
+        findViewById<ImageView>(R.id.addIncomingVideoCall).setOnClickListener(this)
+        findViewById<ImageView>(R.id.addOutgoingCall).setOnClickListener(this)
+        findViewById<ImageView>(R.id.addOutgoingVideoCall).setOnClickListener(this)
+        findViewById<ImageView>(R.id.addPhoneAccount).setOnClickListener(this)
     }
 
     override fun onStart() {
@@ -46,6 +55,7 @@ class InCallActivity : Activity(),
         phoneNumber.text = Editable.Factory.getInstance()
                 .newEditable(mPreferences.getString(PREFERENCE_LAST_NUMBER, "0987654321"))
         CallList.addListener(this)
+        PhoneAccountManager.addListener(this)
     }
 
     override fun onResume() {
@@ -80,6 +90,7 @@ class InCallActivity : Activity(),
         super.onStop()
         mPreferences.edit().putString(PREFERENCE_LAST_NUMBER, phoneNumber.text.toString()).apply()
         CallList.removeListener(this)
+        PhoneAccountManager.removeListener(this)
     }
 
     private fun maybeRequestDrawOverlays() {
@@ -91,70 +102,41 @@ class InCallActivity : Activity(),
     }
 
     private fun updateView() {
-        var resId = android.R.drawable.presence_invisible
-        if (checkReadPhoneStatePermission()) {
-            if (mDefaultPhoneAccount.isRegistered) {
-                resId = if (mDefaultPhoneAccount.isEnabled) {
-                    android.R.drawable.presence_online
-                } else {
-                    android.R.drawable.presence_busy
-                }
-            }
-        }
-        registerPhoneAccount.setImageResource(resId)
-
-        callList.removeAllViews()
-        CallList.getAllCalls()
-                .filter { it.isConference || !it.hasParent }
-                .forEach {
-                    val item = InCallListItem(it, layoutInflater, callList)
-                    callList.addView(item.view)
-                }
+        mAdapter.calls = CallList.getAllCalls().toList()
+        mAdapter.accounts = PhoneAccountManager.getAll(this)
     }
 
     override fun onClick(v: View?) {
         when (v?.id) {
-            R.id.registerPhoneAccount -> run {
-                mDefaultPhoneAccount.register()
-                updateView()
-                if (mDefaultPhoneAccount.isRegistered && !mDefaultPhoneAccount.isSelfManaged) {
-                    val intent = Intent()
-                    intent.setClassName(TELECOM_PACKAGE_NAME, ENABLE_ACCOUNT_PREFERENCE)
-                    if (packageManager.queryIntentActivities(intent, 0).size > 0) {
-                        startActivity(intent)
-                    } else {
-                        startActivity(Intent(TelecomManager.ACTION_CHANGE_PHONE_ACCOUNTS))
-                    }
-                }
-            }
             R.id.addIncomingCall -> run {
-                mDefaultPhoneAccount.addIncomingCall(this, phoneNumber.text.toString())
+                mDefaultPhoneAccount?.addIncomingCall(this, phoneNumber.text.toString())
             }
             R.id.addIncomingVideoCall -> run {
-                mDefaultPhoneAccount.addIncomingCall(this, phoneNumber.text.toString(), VideoProfile.STATE_BIDIRECTIONAL)
+                mDefaultPhoneAccount?.addIncomingCall(this, phoneNumber.text.toString(), VideoProfile.STATE_BIDIRECTIONAL)
             }
             R.id.addOutgoingCall -> run {
-                mDefaultPhoneAccount.addOutgoingCall(this, phoneNumber.text.toString())
+                mDefaultPhoneAccount?.addOutgoingCall(this, phoneNumber.text.toString())
             }
             R.id.addOutgoingVideoCall -> run {
-                mDefaultPhoneAccount.addOutgoingCall(this, phoneNumber.text.toString(), VideoProfile.STATE_BIDIRECTIONAL)
+                mDefaultPhoneAccount?.addOutgoingCall(this, phoneNumber.text.toString(), VideoProfile.STATE_BIDIRECTIONAL)
             }
-        }
-    }
-
-    override fun onLongClick(v: View?): Boolean {
-        when (v?.id) {
-            R.id.registerPhoneAccount -> run {
-                if (mDefaultPhoneAccount.isRegistered) {
-                    mDefaultPhoneAccount.unregister()
-                    updateView()
+            R.id.addPhoneAccount -> run {
+                val editText = EditText(this).apply {
+                    id = R.id.dialog_edit_id
+                    hint = "PhoneAccount ID"
                 }
-            }
-            else -> run {
-                return false
+                AlertDialog.Builder(this)
+                        .setView(editText)
+                        .setPositiveButton(android.R.string.ok) { _, _ ->
+                            val newId = editText.text.toString()
+                            if (newId.isNotBlank() && !PhoneAccountManager.getAllIds(this).contains(newId)) {
+                                PhoneAccountManager.add(this, newId)
+                            }
+                        }
+                        .setNegativeButton(android.R.string.cancel) { dialog, _ -> dialog.cancel() }
+                        .show()
             }
         }
-        return true
     }
 
     private fun checkCallPhonePermission(): Boolean =
@@ -166,8 +148,12 @@ class InCallActivity : Activity(),
     private fun checkCameraPermission(): Boolean =
             checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
 
-
     override fun onCallListChanged() {
-        updateView()
+        mAdapter.calls = CallList.getAllCalls().toList()
     }
+
+    override fun onPhoneAccountListChanged() {
+        mAdapter.accounts = PhoneAccountManager.getAll(this)
+    }
+
 }

@@ -1,4 +1,4 @@
-package tw.lospot.kin.call.connection
+package tw.lospot.kin.call.phoneaccount
 
 import android.Manifest
 import android.content.ComponentName
@@ -12,6 +12,7 @@ import android.telecom.PhoneAccountHandle
 import android.telecom.TelecomManager
 import android.telecom.VideoProfile
 import tw.lospot.kin.call.R
+import tw.lospot.kin.call.connection.ConnectionService
 
 /**
  * Utils of PhoneAccount

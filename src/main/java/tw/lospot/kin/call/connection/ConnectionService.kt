@@ -1,10 +1,9 @@
 package tw.lospot.kin.call.connection
 
 import android.telecom.*
-import android.telecom.TelecomManager.EXTRA_INCOMING_VIDEO_STATE
-import android.telecom.TelecomManager.EXTRA_START_CALL_WITH_VIDEO_STATE
 import tw.lospot.kin.call.Log
 import tw.lospot.kin.call.bubble.BubbleList
+import tw.lospot.kin.call.phoneaccount.PhoneAccountHelper
 
 class ConnectionService : android.telecom.ConnectionService() {
 

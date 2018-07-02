@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="default_account" translatable="false">default@lospot.tw</string>
     <string name="title_in_call_manager">Virtual Call</string>
 </resources>
