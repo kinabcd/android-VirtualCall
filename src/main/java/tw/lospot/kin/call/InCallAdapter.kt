@@ -26,16 +26,14 @@ class InCallAdapter : RecyclerView.Adapter<BaseViewHolder>() {
 
     private fun updateCallsByAccountId() {
         val newItems = ArrayList<Any>(calls.size + accounts.size)
-        accounts.forEach {
-            val account = it
+        accounts.forEach { account ->
             newItems.add(account)
             calls.filter { it.phoneAccountHandle == account.phoneAccountHandle }
                     .filter { it.isConference || !it.hasParent }
-                    .forEach {
-                        val parentCall = it
+                    .forEach { parentCall ->
                         newItems.add(parentCall)
-                        parentCall.children.forEach {
-                            newItems.add(it)
+                        parentCall.children.forEach { childCall ->
+                            newItems.add(childCall)
                         }
                     }
         }
