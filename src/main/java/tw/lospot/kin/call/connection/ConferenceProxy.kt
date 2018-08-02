@@ -54,6 +54,7 @@ class ConferenceProxy(val context: Context, override val phoneAccountHandle: Pho
             connection.connectionCapabilities = connection.connectionCapabilities
                     .and(CAPABILITY_DISCONNECT_FROM_CONFERENCE.inv())
                     .and(CAPABILITY_SEPARATE_FROM_CONFERENCE.inv())
+            removeConnection(connection)
             connection.setActive()
             connection.onStateChanged(connection.state)
             maybeDestroy()
