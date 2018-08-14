@@ -64,6 +64,10 @@ class ConferenceProxy(val context: Context, override val phoneAccountHandle: Pho
             hold()
         }
 
+        override fun onUnhold() {
+            unhold()
+        }
+
         override fun onDisconnect() {
             disconnect(DisconnectCause(DisconnectCause.LOCAL))
         }
