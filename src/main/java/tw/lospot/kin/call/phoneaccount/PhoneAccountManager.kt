@@ -38,8 +38,9 @@ object PhoneAccountManager {
     }
 
     fun getAllIds(context: Context): List<String> {
-        return getSharedPreferences(context)
-                .getStringSet(ACCOUNT_ID_SET, setOf("default@lospot.tw")).toList()
+        return (getSharedPreferences(context).getStringSet(ACCOUNT_ID_SET, null)
+                ?: setOf("default@lospot.tw"))
+                .toList()
     }
 
     private fun getSharedPreferences(context: Context): SharedPreferences =

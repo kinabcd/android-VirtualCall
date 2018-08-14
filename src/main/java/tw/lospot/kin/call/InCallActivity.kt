@@ -77,7 +77,7 @@ class InCallActivity : Activity(),
         }
     }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>?, grantResults: IntArray?) {
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (!checkCallPhonePermission() || !checkReadPhoneStatePermission() || !checkCameraPermission()) {
             finish()

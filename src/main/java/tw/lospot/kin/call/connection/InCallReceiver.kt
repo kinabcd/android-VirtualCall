@@ -20,15 +20,15 @@ class InCallReceiver : BroadcastReceiver() {
         Log.v(this, "onReceive " + intent.action)
         when (intent.action) {
             ACTION_CALL -> {
-                if (intent.data != null) {
+                intent.data?.let { data ->
                     val videoState = intent.getIntExtra("video", VideoProfile.STATE_AUDIO_ONLY)
-                    PhoneAccountHelper(context).addOutgoingCall(context, intent.data, videoState)
+                    PhoneAccountHelper(context).addOutgoingCall(context, data, videoState)
                 }
             }
             ACTION_INCOMING_CALL -> {
-                if (intent.data != null) {
+                intent.data?.let { data ->
                     val videoState = intent.getIntExtra("video", VideoProfile.STATE_AUDIO_ONLY)
-                    PhoneAccountHelper(context).addIncomingCall(context, intent.data, videoState)
+                    PhoneAccountHelper(context).addIncomingCall(context, data, videoState)
                 }
             }
             ACTION_DISCONNECT -> {
