@@ -31,13 +31,6 @@ class BubbleList(val context: Context) : CallList.Listener {
                     bubbles[it]!!.show()
                 }
             }
-            var count = 1
-            liveCalls.forEach {
-                if (bubbles.containsKey(it)) {
-                    bubbles[it]!!.y = (count * TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 64f, context.resources.displayMetrics)).toInt()
-                    count += 1
-                }
-            }
         }
     }
 

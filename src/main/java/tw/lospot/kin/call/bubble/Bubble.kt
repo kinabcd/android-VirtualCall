@@ -2,18 +2,18 @@ package tw.lospot.kin.call.bubble
 
 import android.animation.Animator
 import android.animation.ValueAnimator
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.PixelFormat
+import android.graphics.Point
 import android.graphics.drawable.Icon
 import android.os.Build
 import android.telecom.Connection.*
-import android.view.Gravity.END
-import android.view.Gravity.TOP
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.view.WindowManager
+import android.util.TypedValue
+import android.util.TypedValue.COMPLEX_UNIT_DIP
+import android.view.*
+import android.view.Gravity.*
 import android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
 import android.view.WindowManager.LayoutParams.TYPE_PHONE
 import android.view.animation.OvershootInterpolator
@@ -35,6 +35,9 @@ class Bubble(context: Context, private val call: Call) : Call.Listener {
     private val layoutInflater = LayoutInflater.from(context)
     private val packageName = context.packageName
     private val actionsView = BubbleActionBox(context)
+    private val windowSize get() = Point().apply { windowManager.defaultDisplay.getSize(this) }
+    private val marginHorizontal = TypedValue.applyDimension(COMPLEX_UNIT_DIP, 8f, context.resources.displayMetrics).toInt()
+    private val clickThreshold = TypedValue.applyDimension(COMPLEX_UNIT_DIP, 5f, context.resources.displayMetrics).toInt()
 
     private val rootView by lazy { layoutInflater.inflate(R.layout.bubble, null, false) }
     private val rootParam by lazy {
@@ -54,13 +57,15 @@ class Bubble(context: Context, private val call: Call) : Call.Listener {
                 PixelFormat.TRANSPARENT)
     }
     private val idView by lazy {
-        rootView.callId.setOnClickListener {
-            if (state == State.EXPANDED)
-                collapse()
-            else
-                expand()
+        rootView.callId.apply {
+            setOnClickListener {
+                if (state == State.EXPANDED)
+                    collapse()
+                else
+                    expand()
+            }
+            setOnTouchListener(TouchEventProcessor())
         }
-        rootView.callId
     }
     private var targetState = State.NONE
     private var state = State.NONE
@@ -77,9 +82,9 @@ class Bubble(context: Context, private val call: Call) : Call.Listener {
         }
 
     var x: Int
-        get() = rootParam.x
+        get() = rootParam.x + rootView.measuredWidth / 2
         set(value) {
-            rootParam.x = value
+            rootParam.x = value - rootView.measuredWidth / 2
             if (isViewAdded) {
                 windowManager.updateViewLayout(rootView, rootParam)
             }
@@ -143,23 +148,24 @@ class Bubble(context: Context, private val call: Call) : Call.Listener {
         }
     }
 
+    @SuppressLint("RtlHardcoded")
     private fun startShow() {
         updateViews()
         rootView.measure(
                 View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
                 View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))
-        x = -rootView.measuredWidth
-        rootParam.gravity = TOP or END
+        x = -rootView.measuredWidth / 2
+        rootParam.gravity = TOP or LEFT
         windowManager.addView(rootView, rootParam)
         call.addListener(this)
         isViewAdded = true
-        animateMoveForX(idView.measuredWidth - rootView.measuredWidth) {
+        moveToEdge {
             setState(State.SHOWN)
         }
     }
 
     private fun startHide() {
-        animateMoveForX(-rootView.measuredWidth) {
+        moveToOutOfEdge {
             windowManager.removeView(rootView)
             call.removeListener(this)
             isViewAdded = false
@@ -168,7 +174,14 @@ class Bubble(context: Context, private val call: Call) : Call.Listener {
     }
 
     private fun startExpand() {
-        animateMoveForX((actionsView.width - rootView.width) / 2) {
+        val moveToLeft = x < windowSize.x / 2
+        val targetX = if (moveToLeft) {
+            actionsView.width / 2 + marginHorizontal
+        } else {
+            windowSize.x - (actionsView.width / 2) - marginHorizontal
+        }
+        animateMoveForX(targetX) {
+            actionsView.x = targetX
             actionsView.y = y + rootView.height
             actionsView.show {
                 setState(State.EXPANDED)
@@ -178,13 +191,33 @@ class Bubble(context: Context, private val call: Call) : Call.Listener {
 
     private fun startCollapse() {
         actionsView.hide {
-            animateMoveForX(idView.measuredWidth - rootView.measuredWidth) {
+            moveToEdge {
                 setState(State.SHOWN)
             }
         }
     }
 
-    private fun animateMoveForX(targetX: Int, endCallback: () -> Unit) {
+    private fun moveToOutOfEdge(endCallback: () -> Unit = {}) {
+        val moveToLeft = x < windowSize.x / 2
+        val targetX = if (moveToLeft) {
+            -rootView.measuredWidth / 2
+        } else {
+            windowSize.x + rootView.measuredWidth / 2
+        }
+        animateMoveForX(targetX, endCallback)
+    }
+
+    private fun moveToEdge(endCallback: () -> Unit = {}) {
+        val moveToLeft = x < windowSize.x / 2
+        val targetX = if (moveToLeft) {
+            rootView.measuredWidth / 2 + marginHorizontal
+        } else {
+            windowSize.x - rootView.measuredWidth / 2 - marginHorizontal
+        }
+        animateMoveForX(targetX, endCallback)
+    }
+
+    private fun animateMoveForX(targetX: Int, endCallback: () -> Unit = {}) {
         ValueAnimator.ofInt(x, targetX).apply {
             addUpdateListener {
                 x = it.animatedValue as Int
@@ -194,8 +227,7 @@ class Bubble(context: Context, private val call: Call) : Call.Listener {
                 }
 
                 override fun onAnimationEnd(animation: Animator?) {
-                    rootParam.x = targetX
-                    windowManager.updateViewLayout(rootView, rootParam)
+                    x = targetX
                     endCallback()
                 }
 
@@ -251,26 +283,68 @@ class Bubble(context: Context, private val call: Call) : Call.Listener {
     }
 
     private fun gerAnswerAction(): BubbleAction {
-        return BubbleAction(Icon.createWithResource(packageName, android.R.drawable.ic_menu_call),
-                "Answer", {
+        return BubbleAction(Icon.createWithResource(packageName, android.R.drawable.ic_menu_call), "Answer") {
             call.answer()
             collapse()
-        })
+        }
     }
 
     private fun gerDisconnectAction(): BubbleAction {
-        return BubbleAction(Icon.createWithResource(packageName, android.R.drawable.ic_delete),
-                "Disconnect", {
+        return BubbleAction(Icon.createWithResource(packageName, android.R.drawable.ic_delete), "Disconnect") {
             call.disconnect()
             collapse()
-        })
+        }
     }
 
     private fun gerPushAction(): BubbleAction {
-        return BubbleAction(Icon.createWithResource(packageName, android.R.drawable.stat_sys_upload),
-                "Push to External", {
+        return BubbleAction(Icon.createWithResource(packageName, android.R.drawable.stat_sys_upload), "Push to External") {
             call.push()
             collapse()
-        })
+        }
+    }
+
+    private inner class TouchEventProcessor : View.OnTouchListener {
+        private var isTouching = false
+        private var downPoint: Point = Point(0, 0)
+        private var downViewPoint: Point = Point(0, 0)
+        private var maybeClick = false
+
+        override fun onTouch(view: View, motionEvent: MotionEvent): Boolean {
+            when (motionEvent.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    if (isTouching) return false
+                    downPoint.x = motionEvent.rawX.toInt()
+                    downPoint.y = motionEvent.rawY.toInt()
+                    downViewPoint.x = x
+                    downViewPoint.y = y
+                    isTouching = true
+                    maybeClick = true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    if (!isTouching) return false
+                    val deltaX = motionEvent.rawX.toInt() - downPoint.x
+                    val deltaY = motionEvent.rawY.toInt() - downPoint.y
+                    x = downViewPoint.x + deltaX
+                    y = downViewPoint.y + deltaY
+                    if (maybeClick && Math.sqrt(Math.pow(deltaX.toDouble(), 2.0) + Math.pow(deltaY.toDouble(), 2.0)) > clickThreshold) {
+                        maybeClick = false
+                        if (targetState == State.EXPANDED) {
+                            actionsView.hide {
+                                setTargetState(State.SHOWN)
+                                setState(State.SHOWN)
+                            }
+                        }
+                    }
+                }
+                MotionEvent.ACTION_UP -> {
+                    isTouching = false
+                    moveToEdge()
+                    if (maybeClick) {
+                        view.performClick()
+                    }
+                }
+            }
+            return true
+        }
     }
 }

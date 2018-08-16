@@ -1,5 +1,6 @@
 package tw.lospot.kin.call.bubble
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.PixelFormat
 import android.os.Build
@@ -16,6 +17,11 @@ class BubbleActionBox(context: Context) {
         get() = adapter.actions
         set(value) {
             adapter.actions = value
+        }
+    var x
+        get() = rootParam.x + width / 2
+        set(value) {
+            rootParam.x = value - width / 2
         }
     var y = 0
         set(value) {
@@ -61,10 +67,11 @@ class BubbleActionBox(context: Context) {
     var isShowing = false
         private set
 
+    @SuppressLint("RtlHardcoded")
     fun show(callback: () -> Unit = {}) {
         if (!isShowing) {
             isShowing = true
-            rootParam.gravity = Gravity.TOP or Gravity.END
+            rootParam.gravity = Gravity.TOP or Gravity.LEFT
             windowManager.addView(rootView, rootParam)
             rootView.scaleX = 0f
             rootView.scaleY = 0f
