@@ -11,6 +11,8 @@ import android.os.Handler
 import android.telecom.*
 import android.telecom.Connection.*
 import tw.lospot.kin.call.Log
+import java.util.*
+import java.util.regex.Pattern
 
 /**
  * Connection emulator
@@ -114,7 +116,12 @@ class ConnectionProxy(context: Context, request: ConnectionRequest) :
         }
 
         override fun onPostDialContinue(proceed: Boolean) {
-            Log.v(TAG, "onPostDialContinue")
+            Log.v(TAG, "onPostDialContinue $proceed")
+            if (proceed) {
+                maybeSetPostDialWait()
+            } else {
+                clearPostDial()
+            }
         }
 
         override fun onDeflect(address: Uri?) {
@@ -154,7 +161,10 @@ class ConnectionProxy(context: Context, request: ConnectionRequest) :
         }
     }
 
-
+    private var postDial: Queue<String> =
+            request.address.encodedSchemeSpecificPart.split(Pattern.compile(";|(%3B)")).let {
+                LinkedList(if (it.size > 1) it.subList(1, it.size) else emptyList())
+            }
     override val phoneAccountHandle: PhoneAccountHandle = request.accountHandle
     private var rttTextStream: RttTextStream? = null
         set(value) {
@@ -211,9 +221,20 @@ class ConnectionProxy(context: Context, request: ConnectionRequest) :
         listener?.onStateChanged(state)
     }
 
+    private fun maybeSetPostDialWait() {
+        if (postDial.isNotEmpty()) {
+            telecomConnection.setPostDialWait(postDial.poll())
+        }
+    }
+
+    private fun clearPostDial() {
+        postDial.clear()
+    }
+
     override fun answer(videoState: Int) {
         this.videoState = videoState
         telecomConnection.setActive()
+        maybeSetPostDialWait()
     }
 
     override fun hold() {
