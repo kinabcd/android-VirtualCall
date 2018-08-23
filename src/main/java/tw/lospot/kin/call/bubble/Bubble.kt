@@ -33,6 +33,7 @@ class Bubble(context: Context, private val call: Call) : Call.Listener {
 
     private val windowManager = context.getSystemService(WindowManager::class.java)
     private val layoutInflater = LayoutInflater.from(context)
+    private val resources = context.resources
     private val packageName = context.packageName
     private val actionsView = BubbleActionBox(context)
     private val windowSize get() = Point().apply { windowManager.defaultDisplay.getSize(this) }
@@ -283,14 +284,16 @@ class Bubble(context: Context, private val call: Call) : Call.Listener {
     }
 
     private fun gerAnswerAction(): BubbleAction {
-        return BubbleAction(Icon.createWithResource(packageName, android.R.drawable.ic_menu_call), "Answer") {
+        return BubbleAction(Icon.createWithResource(packageName, R.drawable.ic_answer_call)
+                .setTint(resources.getColor(android.R.color.holo_green_light, null)), "Answer") {
             call.answer()
             collapse()
         }
     }
 
     private fun gerDisconnectAction(): BubbleAction {
-        return BubbleAction(Icon.createWithResource(packageName, android.R.drawable.ic_delete), "Disconnect") {
+        return BubbleAction(Icon.createWithResource(packageName, R.drawable.ic_end_call)
+                .setTint(resources.getColor(android.R.color.holo_red_light, null)), "Disconnect") {
             call.disconnect()
             collapse()
         }

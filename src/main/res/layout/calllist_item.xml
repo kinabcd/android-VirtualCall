@@ -25,7 +25,8 @@
             android:layout_height="32dp"
             android:background="@null"
             android:importantForAccessibility="no"
-            android:src="@android:drawable/ic_delete" />
+            android:src="@drawable/ic_end_call"
+            android:tint="@android:color/holo_red_light" />
 
         <ImageButton
             android:id="@+id/pullCall"
