@@ -1,7 +1,7 @@
 package tw.lospot.kin.call.bubble
 
 import android.graphics.drawable.Icon
-import android.support.v7.widget.RecyclerView
+import androidx.recyclerview.widget.RecyclerView
 import android.view.View
 import kotlinx.android.synthetic.main.bubble_action_item.view.*
 

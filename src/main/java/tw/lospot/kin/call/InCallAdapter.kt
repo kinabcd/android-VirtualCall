@@ -1,8 +1,8 @@
 package tw.lospot.kin.call
 
-import android.support.v7.widget.RecyclerView
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.recyclerview.widget.RecyclerView
 import tw.lospot.kin.call.connection.Call
 import tw.lospot.kin.call.phoneaccount.PhoneAccountHelper
 import tw.lospot.kin.call.viewholder.AccountViewHolder
@@ -28,8 +28,9 @@ class InCallAdapter : RecyclerView.Adapter<BaseViewHolder>() {
         val newItems = ArrayList<Any>(calls.size + accounts.size)
         accounts.forEach { account ->
             newItems.add(account)
-            calls.filter { it.phoneAccountHandle == account.phoneAccountHandle }
-                    .filter { it.isConference || !it.hasParent }
+            calls.asSequence()
+                    .filter { it.phoneAccountHandle == account.phoneAccountHandle }
+                    .filter { it.isConference || !it.hasParent }.toList()
                     .forEach { parentCall ->
                         newItems.add(parentCall)
                         parentCall.children.forEach { childCall ->

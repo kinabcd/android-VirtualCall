@@ -7,7 +7,7 @@ import android.hardware.camera2.CameraCaptureSession
 import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
 import android.os.Handler
-import android.support.annotation.MainThread
+import androidx.annotation.MainThread
 import android.view.Surface
 import tw.lospot.kin.call.Log
 
