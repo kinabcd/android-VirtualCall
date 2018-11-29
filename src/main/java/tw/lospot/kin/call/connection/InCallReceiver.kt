@@ -14,6 +14,7 @@ class InCallReceiver : BroadcastReceiver() {
         private const val ACTION_INCOMING_CALL = "tw.lospot.Call.IncomingCall"
         private const val ACTION_DISCONNECT = "tw.lospot.Call.Disconnect"
         private const val ACTION_UPGRADE = "tw.lospot.Call.Upgrade"
+        private const val ACTION_ANSWER = "tw.lospot.Call.Answer"
     }
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -67,6 +68,15 @@ class InCallReceiver : BroadcastReceiver() {
                     val videoState = intent.getIntExtra("video", VideoProfile.STATE_BIDIRECTIONAL)
                     call.requestVideo(videoState)
                 }
+            }
+            ACTION_ANSWER -> {
+                val call = if (intent.hasExtra("callId")) {
+                    val callId = intent.getIntExtra("callId", -1)
+                    CallList.getAllCalls().firstOrNull { it.id == callId }
+                } else {
+                    CallList.getAllCalls().firstOrNull()
+                }
+                call?.answer()
             }
         }
     }

@@ -60,6 +60,7 @@
             <intent-filter>
                 <action android:name="tw.lospot.Call.Disconnect" />
                 <action android:name="tw.lospot.Call.Upgrade" />
+                <action android:name="tw.lospot.Call.Answer" />
             </intent-filter>
         </receiver>
     </application>
