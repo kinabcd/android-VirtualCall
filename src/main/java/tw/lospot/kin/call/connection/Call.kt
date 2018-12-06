@@ -50,12 +50,11 @@ class Call(val telecomCall: TelecomCall.Common) : TelecomCall.Listener {
     }
 
     fun getName(): String {
-        if (telecomCall is ConferenceProxy) {
-            return "Conference Call"
-        } else if (telecomCall is ConnectionProxy) {
-            return telecomCall.telecomConnection.address.schemeSpecificPart
+        return when (telecomCall) {
+            is ConferenceProxy -> "Conference Call"
+            is ConnectionProxy -> telecomCall.telecomConnection.address?.schemeSpecificPart ?: ""
+            else -> ""
         }
-        return ""
     }
 
     fun hold() {

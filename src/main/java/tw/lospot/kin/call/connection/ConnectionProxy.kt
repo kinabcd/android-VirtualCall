@@ -27,7 +27,12 @@ class ConnectionProxy(context: Context, request: ConnectionRequest) :
 
     val telecomConnection = object : Connection() {
         init {
-            setAddress(request.address, TelecomManager.PRESENTATION_ALLOWED)
+            when (request.address?.schemeSpecificPart) {
+                "hidden" -> setAddress(null, TelecomManager.PRESENTATION_RESTRICTED)
+                "unknown" -> setAddress(null, TelecomManager.PRESENTATION_UNKNOWN)
+                "payphone" -> setAddress(null, TelecomManager.PRESENTATION_PAYPHONE)
+                else -> setAddress(request.address, TelecomManager.PRESENTATION_ALLOWED)
+            }
             connectionCapabilities = connectionCapabilities
                     .or(CAPABILITY_SUPPORT_HOLD)
                     .or(CAPABILITY_HOLD)
