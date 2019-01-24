@@ -8,20 +8,18 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import android.telecom.VideoProfile
 import android.text.Editable
-import android.view.View
 import android.widget.EditText
 import android.widget.ImageView
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import tw.lospot.kin.call.connection.CallList
 import tw.lospot.kin.call.phoneaccount.PhoneAccountManager
+import tw.lospot.kin.call.viewholder.NewCallDetail
 
 class InCallActivity : Activity(),
         CallList.Listener,
-        PhoneAccountManager.Listener,
-        View.OnClickListener {
+        PhoneAccountManager.Listener {
 
     companion object {
         private const val PREFERENCE_LAST_NUMBER = "last_number"
@@ -41,11 +39,17 @@ class InCallActivity : Activity(),
         callList.adapter = mAdapter
         callList.layoutManager = LinearLayoutManager(this)
 
-        findViewById<ImageView>(R.id.addIncomingCall).setOnClickListener(this)
-        findViewById<ImageView>(R.id.addIncomingVideoCall).setOnClickListener(this)
-        findViewById<ImageView>(R.id.addOutgoingCall).setOnClickListener(this)
-        findViewById<ImageView>(R.id.addOutgoingVideoCall).setOnClickListener(this)
-        findViewById<ImageView>(R.id.addPhoneAccount).setOnClickListener(this)
+        findViewById<ImageView>(R.id.addIncomingCall).apply {
+            setOnClickListener { mDefaultPhoneAccount?.addIncomingCall(context, phoneNumber.text.toString()) }
+            setOnLongClickListener { showNewIncomingCallDialog(); true }
+        }
+        findViewById<ImageView>(R.id.addOutgoingCall).apply {
+            setOnClickListener { mDefaultPhoneAccount?.addOutgoingCall(context, phoneNumber.text.toString()) }
+            setOnLongClickListener { showNewOutgoingCallDialog(); true }
+        }
+        findViewById<ImageView>(R.id.addPhoneAccount).apply {
+            setOnClickListener { showNewAccountDialog() }
+        }
     }
 
     override fun onStart() {
@@ -105,37 +109,47 @@ class InCallActivity : Activity(),
         mAdapter.accounts = PhoneAccountManager.getAll(this)
     }
 
-    override fun onClick(v: View?) {
-        when (v?.id) {
-            R.id.addIncomingCall -> run {
-                mDefaultPhoneAccount?.addIncomingCall(this, phoneNumber.text.toString())
-            }
-            R.id.addIncomingVideoCall -> run {
-                mDefaultPhoneAccount?.addIncomingCall(this, phoneNumber.text.toString(), VideoProfile.STATE_BIDIRECTIONAL)
-            }
-            R.id.addOutgoingCall -> run {
-                mDefaultPhoneAccount?.addOutgoingCall(this, phoneNumber.text.toString())
-            }
-            R.id.addOutgoingVideoCall -> run {
-                mDefaultPhoneAccount?.addOutgoingCall(this, phoneNumber.text.toString(), VideoProfile.STATE_BIDIRECTIONAL)
-            }
-            R.id.addPhoneAccount -> run {
-                val editText = EditText(this).apply {
-                    id = R.id.dialog_edit_id
-                    hint = "PhoneAccount ID"
-                }
-                AlertDialog.Builder(this)
-                        .setView(editText)
-                        .setPositiveButton(android.R.string.ok) { _, _ ->
-                            val newId = editText.text.toString()
-                            if (newId.isNotBlank() && !PhoneAccountManager.getAllIds(this).contains(newId)) {
-                                PhoneAccountManager.add(this, newId)
-                            }
-                        }
-                        .setNegativeButton(android.R.string.cancel) { dialog, _ -> dialog.cancel() }
-                        .show()
-            }
+    private fun showNewAccountDialog() {
+        val editText = EditText(this).apply {
+            id = R.id.dialog_edit_id
+            hint = "PhoneAccount ID"
         }
+        AlertDialog.Builder(this)
+                .setView(editText)
+                .setPositiveButton(android.R.string.ok) { _, _ ->
+                    val newId = editText.text.toString()
+                    if (newId.isNotBlank() && !PhoneAccountManager.getAllIds(this).contains(newId)) {
+                        PhoneAccountManager.add(this, newId)
+                    }
+                }
+                .setNegativeButton(android.R.string.cancel) { dialog, _ -> dialog.cancel() }
+                .show()
+    }
+
+    private fun showNewIncomingCallDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.new_incoming_call_detail_dialog, null)
+        val holder = NewCallDetail(dialogView)
+        holder.phoneAccounts = PhoneAccountManager.getAll(this)
+        AlertDialog.Builder(this)
+                .setView(dialogView)
+                .setPositiveButton(android.R.string.ok) { _, _ ->
+                    holder.phoneAccount?.addIncomingCall(this, phoneNumber.text.toString(), holder.parameters)
+                }
+                .setNegativeButton(android.R.string.cancel) { dialog, _ -> dialog.cancel() }
+                .show()
+    }
+
+    private fun showNewOutgoingCallDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.new_outgoing_call_detail_dialog, null)
+        val holder = NewCallDetail(dialogView)
+        holder.phoneAccounts = PhoneAccountManager.getAll(this)
+        AlertDialog.Builder(this)
+                .setView(dialogView)
+                .setPositiveButton(android.R.string.ok) { _, _ ->
+                    holder.phoneAccount?.addOutgoingCall(this, phoneNumber.text.toString(), holder.parameters)
+                }
+                .setNegativeButton(android.R.string.cancel) { dialog, _ -> dialog.cancel() }
+                .show()
     }
 
     private fun checkCallPhonePermission(): Boolean =

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <array name="video_state_array">
+        <item>@string/video_state_audio_only</item>
+        <item>@string/video_state_tx_only</item>
+        <item>@string/video_state_rx_only</item>
+        <item>@string/video_state_bidirectional</item>
+    </array>
+</resources>

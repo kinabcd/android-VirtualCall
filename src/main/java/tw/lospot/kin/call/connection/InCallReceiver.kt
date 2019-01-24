@@ -6,6 +6,7 @@ import android.content.Intent
 import android.telecom.DisconnectCause
 import android.telecom.VideoProfile
 import tw.lospot.kin.call.Log
+import tw.lospot.kin.call.phoneaccount.CallParameters
 import tw.lospot.kin.call.phoneaccount.PhoneAccountHelper
 
 class InCallReceiver : BroadcastReceiver() {
@@ -23,13 +24,13 @@ class InCallReceiver : BroadcastReceiver() {
             ACTION_CALL -> {
                 intent.data?.let { data ->
                     val videoState = intent.getIntExtra("video", VideoProfile.STATE_AUDIO_ONLY)
-                    PhoneAccountHelper(context).addOutgoingCall(context, data, videoState)
+                    PhoneAccountHelper(context).addOutgoingCall(context, data, CallParameters(videoState = videoState))
                 }
             }
             ACTION_INCOMING_CALL -> {
                 intent.data?.let { data ->
                     val videoState = intent.getIntExtra("video", VideoProfile.STATE_AUDIO_ONLY)
-                    PhoneAccountHelper(context).addIncomingCall(context, data, videoState)
+                    PhoneAccountHelper(context).addIncomingCall(context, data, CallParameters(videoState = videoState))
                 }
             }
             ACTION_DISCONNECT -> {

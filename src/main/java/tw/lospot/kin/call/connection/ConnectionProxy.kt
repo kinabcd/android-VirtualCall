@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
+import android.os.Looper
 import android.telecom.*
 import android.telecom.Connection.*
 import tw.lospot.kin.call.Log
@@ -26,6 +27,8 @@ class ConnectionProxy(context: Context, request: ConnectionRequest) :
     }
 
     val telecomConnection = object : Connection() {
+        private val mainHandler by lazy { Handler(Looper.getMainLooper()) }
+
         init {
             when (request.address?.schemeSpecificPart) {
                 "hidden" -> setAddress(null, TelecomManager.PRESENTATION_RESTRICTED)
@@ -50,7 +53,10 @@ class ConnectionProxy(context: Context, request: ConnectionRequest) :
         }
 
         override fun onDisconnect() {
-            disconnect(DisconnectCause(DisconnectCause.LOCAL))
+            mainHandler.postDelayed({
+                disconnect(DisconnectCause(DisconnectCause.LOCAL))
+            }, disconnectDelay)
+
         }
 
         override fun onAbort() {
@@ -70,7 +76,10 @@ class ConnectionProxy(context: Context, request: ConnectionRequest) :
         }
 
         override fun onAnswer(vs: Int) {
-            answer(vs)
+            mainHandler.postDelayed({
+                answer(vs)
+            }, answerDelay)
+
         }
 
         override fun onReject() {
@@ -78,7 +87,9 @@ class ConnectionProxy(context: Context, request: ConnectionRequest) :
         }
 
         override fun onReject(replyMessage: String?) {
-            disconnect(DisconnectCause(DisconnectCause.REJECTED))
+            mainHandler.postDelayed({
+                disconnect(DisconnectCause(DisconnectCause.REJECTED))
+            }, rejectDelay)
         }
 
         override fun onCallEvent(event: String, extras: Bundle) {
@@ -193,17 +204,20 @@ class ConnectionProxy(context: Context, request: ConnectionRequest) :
 
     override val conferenceable: Conferenceable get() = telecomConnection
     override val state: Int get() = telecomConnection.state
-    override var videoState: Int = VideoProfile.STATE_AUDIO_ONLY
+    override var videoState: Int = request.extras.getInt(TelecomManager.EXTRA_START_CALL_WITH_VIDEO_STATE, VideoProfile.STATE_AUDIO_ONLY)
         set(value) {
             field = value
             telecomConnection.setVideoState(value)
         }
+    private val disconnectDelay: Long = request.extras.getLong(TelecomCall.EXTRA_DELAY_DISCONNECT, 0)
+    private val rejectDelay: Long = request.extras.getLong(TelecomCall.EXTRA_DELAY_REJECT, 0)
+    private val answerDelay: Long = request.extras.getLong(TelecomCall.EXTRA_DELAY_ANSWER, 0)
 
     init {
         Log.v(TAG, "request=$request")
         videoProvider.connection = this
         telecomConnection.videoProvider = videoProvider
-        videoState = request.extras.getInt(TelecomManager.EXTRA_START_CALL_WITH_VIDEO_STATE, VideoProfile.STATE_AUDIO_ONLY)
+        telecomConnection.setVideoState(videoState)
         if (Build.VERSION.SDK_INT >= 28 && request.isRequestingRtt) {
             rttTextStream = request.rttTextStream
             Log.v(TAG, "isRequestingRtt=${request.isRequestingRtt}, rttTextStream=${request.rttTextStream}")

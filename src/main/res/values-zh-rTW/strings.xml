@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="title_in_call_manager">虛擬通話</string>
+    <string name="video_state_audio_only">只有語音</string>
+    <string name="video_state_tx_only">僅傳送視訊</string>
+    <string name="video_state_rx_only">僅接收視訊</string>
+    <string name="video_state_bidirectional">雙向視訊</string>
 </resources>

@@ -8,6 +8,10 @@ import android.telecom.PhoneAccountHandle
  * Created by kin on 2018/2/28.
  */
 object TelecomCall {
+    const val EXTRA_DELAY_DISCONNECT = "tw.lospot.kin.call.delay_disconnect"
+    const val EXTRA_DELAY_REJECT = "tw.lospot.kin.call.delay_reject"
+    const val EXTRA_DELAY_ANSWER = "tw.lospot.kin.call.delay_answer"
+
     interface Listener {
         fun onStateChanged(state: Int)
         fun onPlayDtmfTone(c: Char)

@@ -18,8 +18,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_above="@+id/linearLayout"
-        android:layout_marginEnd="16dp"
         android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
         android:ems="20"
         android:hint="Phone Number"
         android:text="0987654321" />
@@ -30,8 +30,8 @@
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         android:orientation="horizontal"
-        android:paddingEnd="16dp"
-        android:paddingStart="16dp">
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp">
 
         <ImageButton
             android:id="@+id/addOutgoingCall"
@@ -44,16 +44,6 @@
             android:tint="#999" />
 
         <ImageButton
-            android:id="@+id/addOutgoingVideoCall"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:layout_margin="8dp"
-            android:background="@null"
-            android:importantForAccessibility="no"
-            android:src="@drawable/incall_video_outgoing"
-            android:tint="#999" />
-
-        <ImageButton
             android:id="@+id/addIncomingCall"
             android:layout_width="32dp"
             android:layout_height="32dp"
@@ -63,19 +53,10 @@
             android:src="@drawable/incall_audio_incoming"
             android:tint="#999" />
 
-        <ImageButton
-            android:id="@+id/addIncomingVideoCall"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:layout_margin="8dp"
-            android:background="@null"
-            android:importantForAccessibility="no"
-            android:src="@drawable/incall_video_incoming"
-            android:tint="#999" />
         <Space
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"/>
+            android:layout_weight="1" />
 
         <ImageButton
             android:id="@+id/addPhoneAccount"
