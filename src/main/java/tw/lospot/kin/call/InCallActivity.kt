@@ -23,6 +23,8 @@ class InCallActivity : Activity(),
 
     companion object {
         private const val PREFERENCE_LAST_NUMBER = "last_number"
+        private const val CODE_REQUEST_PERMISSIONS = 1000
+        private const val CODE_REQUEST_MANAGE_OVERLAY_PERMISSION = 1001
     }
 
     private val mPreferences by lazy { getSharedPreferences("Connection", MODE_PRIVATE) }
@@ -50,19 +52,6 @@ class InCallActivity : Activity(),
         findViewById<ImageView>(R.id.addPhoneAccount).apply {
             setOnClickListener { showNewAccountDialog() }
         }
-    }
-
-    override fun onStart() {
-        super.onStart()
-        updateView()
-        phoneNumber.text = Editable.Factory.getInstance()
-                .newEditable(mPreferences.getString(PREFERENCE_LAST_NUMBER, "0987654321"))
-        CallList.addListener(this)
-        PhoneAccountManager.addListener(this)
-    }
-
-    override fun onResume() {
-        super.onResume()
         val requestPermission = ArrayList<String>(2)
         if (!checkCallPhonePermission()) {
             requestPermission.add(Manifest.permission.CALL_PHONE)
@@ -74,19 +63,46 @@ class InCallActivity : Activity(),
             requestPermission.add(Manifest.permission.CAMERA)
         }
         if (requestPermission.size > 0) {
-            requestPermissions(requestPermission.toTypedArray(), 0)
+            requestPermissions(requestPermission.toTypedArray(), CODE_REQUEST_PERMISSIONS)
         } else {
             maybeRequestDrawOverlays()
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        updateView()
+        phoneNumber.text = Editable.Factory.getInstance()
+                .newEditable(mPreferences.getString(PREFERENCE_LAST_NUMBER, "0987654321"))
+        CallList.addListener(this)
+        PhoneAccountManager.addListener(this)
+    }
+
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (!checkCallPhonePermission() || !checkReadPhoneStatePermission() || !checkCameraPermission()) {
-            finish()
+        when(requestCode) {
+            CODE_REQUEST_PERMISSIONS -> {
+                if (!checkCallPhonePermission() || !checkReadPhoneStatePermission() || !checkCameraPermission()) {
+                    finish()
+                } else {
+                    maybeRequestDrawOverlays()
+                    updateView()
+                }
+            }
         }
-        maybeRequestDrawOverlays()
-        updateView()
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        when(requestCode) {
+            CODE_REQUEST_MANAGE_OVERLAY_PERMISSION -> {
+                if (!Settings.canDrawOverlays(this)) {
+                    finish()
+                } else {
+                    updateView()
+                }
+            }
+        }
     }
 
     override fun onStop() {
@@ -99,8 +115,10 @@ class InCallActivity : Activity(),
     private fun maybeRequestDrawOverlays() {
         if (!Settings.canDrawOverlays(this)) {
             Log.w(this, "checkDrawOverlays failed")
-            startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
-            finish()
+            startActivityForResult(
+                    Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")),
+                    CODE_REQUEST_MANAGE_OVERLAY_PERMISSION
+            )
         }
     }
 
