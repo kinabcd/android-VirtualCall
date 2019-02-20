@@ -41,6 +41,7 @@ class PhoneAccountHelper(context: Context, private val address: String = "defaul
                 .setCapabilities(PhoneAccount.CAPABILITY_CALL_PROVIDER
                         .or(PhoneAccount.CAPABILITY_CONNECTION_MANAGER)
                         .or(PhoneAccount.CAPABILITY_VIDEO_CALLING)
+                        .or(PhoneAccount.CAPABILITY_SUPPORTS_VIDEO_CALLING)
                         .or(PhoneAccount.CAPABILITY_RTT)
                 )
                 .addSupportedUriScheme(PhoneAccount.SCHEME_SIP)
