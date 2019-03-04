@@ -1,7 +1,6 @@
 package tw.lospot.kin.call.connection
 
 
-import android.annotation.TargetApi
 import android.bluetooth.BluetoothDevice
 import android.content.Context
 import android.net.Uri
@@ -11,6 +10,7 @@ import android.os.Handler
 import android.os.Looper
 import android.telecom.*
 import android.telecom.Connection.*
+import androidx.annotation.RequiresApi
 import tw.lospot.kin.call.Log
 import java.util.*
 import java.util.regex.Pattern
@@ -42,6 +42,8 @@ class ConnectionProxy(context: Context, request: ConnectionRequest) :
                     .or(CAPABILITY_MUTE)
                     .or(CAPABILITY_RESPOND_VIA_TEXT)
                     .or(CAPABILITY_CANNOT_DOWNGRADE_VIDEO_TO_AUDIO)
+            connectionProperties = connectionProperties
+                    .or(1 shl 3)
             if (request.isRequestingRtt) {
                 connectionProperties = connectionProperties
                         .or(PROPERTY_IS_RTT)
@@ -152,7 +154,7 @@ class ConnectionProxy(context: Context, request: ConnectionRequest) :
             Log.v(TAG, "requestBluetoothAudio $bluetoothDevice")
         }
 
-        @TargetApi(28)
+        @RequiresApi(28)
         override fun handleRttUpgradeResponse(rttTextStream: RttTextStream?) {
             Log.v(TAG, "handleRttUpgradeResponse $rttTextStream")
             rttTextStream?.let {
@@ -161,7 +163,7 @@ class ConnectionProxy(context: Context, request: ConnectionRequest) :
             }
         }
 
-        @TargetApi(28)
+        @RequiresApi(28)
         override fun onStartRtt(rttTextStream: RttTextStream) {
             Log.v(TAG, "onStartRtt $rttTextStream")
             this@ConnectionProxy.rttTextStream = rttTextStream
@@ -169,7 +171,7 @@ class ConnectionProxy(context: Context, request: ConnectionRequest) :
             sendRttInitiationSuccess()
         }
 
-        @TargetApi(28)
+        @RequiresApi(28)
         override fun onStopRtt() {
             Log.v(TAG, "onStopRtt")
             this@ConnectionProxy.rttTextStream = null
@@ -209,6 +211,20 @@ class ConnectionProxy(context: Context, request: ConnectionRequest) :
             field = value
             telecomConnection.setVideoState(value)
         }
+    override var isWifiCall: Boolean
+        @RequiresApi(25)
+        get() = hasProperty(TelecomCall.PROPERTY_WIFI)
+        @RequiresApi(25)
+        set(value) {
+            setProperty(TelecomCall.PROPERTY_WIFI, value)
+        }
+    override var isHdAudio: Boolean
+        @RequiresApi(25)
+        get() = hasProperty(TelecomCall.PROPERTY_HIGH_DEF_AUDIO)
+        @RequiresApi(25)
+        set(value) {
+            setProperty(TelecomCall.PROPERTY_HIGH_DEF_AUDIO, value)
+        }
     private val disconnectDelay: Long = request.extras.getLong(TelecomCall.EXTRA_DELAY_DISCONNECT, 0)
     private val rejectDelay: Long = request.extras.getLong(TelecomCall.EXTRA_DELAY_REJECT, 0)
     private val answerDelay: Long = request.extras.getLong(TelecomCall.EXTRA_DELAY_ANSWER, 0)
@@ -221,6 +237,11 @@ class ConnectionProxy(context: Context, request: ConnectionRequest) :
         if (Build.VERSION.SDK_INT >= 28 && request.isRequestingRtt) {
             rttTextStream = request.rttTextStream
             Log.v(TAG, "isRequestingRtt=${request.isRequestingRtt}, rttTextStream=${request.rttTextStream}")
+        }
+
+        if (Build.VERSION.SDK_INT >= 25) {
+            isHdAudio = request.extras.getBoolean(TelecomCall.EXTRA_HIGH_DEF_AUDIO, false)
+            isWifiCall = request.extras.getBoolean(TelecomCall.EXTRA_WIFI, false)
         }
     }
 
@@ -305,6 +326,18 @@ class ConnectionProxy(context: Context, request: ConnectionRequest) :
     override fun requestRtt() {
         if (Build.VERSION.SDK_INT >= 28) {
             telecomConnection.sendRemoteRttRequest()
+        }
+    }
+
+    @RequiresApi(25)
+    private fun hasProperty(property: Int) = telecomConnection.connectionProperties and property != 0
+
+    @RequiresApi(25)
+    private fun setProperty(property: Int, on: Boolean) {
+        telecomConnection.connectionProperties = if (on) {
+            telecomConnection.connectionProperties.or(property)
+        } else {
+            telecomConnection.connectionProperties.and(property.inv())
         }
     }
 }

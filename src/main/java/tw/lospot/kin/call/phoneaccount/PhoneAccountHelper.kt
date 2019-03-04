@@ -77,6 +77,8 @@ class PhoneAccountHelper(context: Context, private val address: String = "defaul
         extras.putLong(TelecomCall.EXTRA_DELAY_ANSWER, parameters.answerDelay)
         extras.putLong(TelecomCall.EXTRA_DELAY_REJECT, parameters.rejectDelay)
         extras.putLong(TelecomCall.EXTRA_DELAY_DISCONNECT, parameters.disconnectDelay)
+        extras.putBoolean(TelecomCall.EXTRA_HIGH_DEF_AUDIO, parameters.isHdAudio)
+        extras.putBoolean(TelecomCall.EXTRA_WIFI, parameters.isWifi)
 
         val telecomManager = context.getSystemService(TelecomManager::class.java)
         telecomManager!!.addNewIncomingCall(phoneAccountHandle, extras)
@@ -96,6 +98,8 @@ class PhoneAccountHelper(context: Context, private val address: String = "defaul
         extras.putInt(TelecomManager.EXTRA_START_CALL_WITH_VIDEO_STATE, parameters.videoState)
         extras.putBundle(TelecomManager.EXTRA_OUTGOING_CALL_EXTRAS, Bundle().apply {
             putLong(TelecomCall.EXTRA_DELAY_DISCONNECT, parameters.disconnectDelay)
+            putBoolean(TelecomCall.EXTRA_HIGH_DEF_AUDIO, parameters.isHdAudio)
+            putBoolean(TelecomCall.EXTRA_WIFI, parameters.isWifi)
         })
 
         val telecomManager = context.getSystemService(TelecomManager::class.java)

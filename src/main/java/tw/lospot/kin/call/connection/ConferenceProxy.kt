@@ -3,8 +3,8 @@ package tw.lospot.kin.call.connection
 import android.content.Context
 import android.os.Build
 import android.telecom.*
-import android.telecom.Connection
 import android.telecom.Connection.*
+import androidx.annotation.RequiresApi
 import tw.lospot.kin.call.Log
 
 /**
@@ -160,6 +160,32 @@ class ConferenceProxy(val context: Context, override val phoneAccountHandle: Pho
     private fun disconnectAllChildren() {
         telecomConference.connections.forEach {
             it.onDisconnect()
+        }
+    }
+    override var isWifiCall: Boolean
+        @RequiresApi(25)
+        get() = hasProperty(TelecomCall.PROPERTY_WIFI)
+        @RequiresApi(25)
+        set(value) {
+            setProperty(TelecomCall.PROPERTY_WIFI, value)
+        }
+    override var isHdAudio: Boolean
+        @RequiresApi(25)
+        get() = hasProperty(TelecomCall.PROPERTY_HIGH_DEF_AUDIO)
+        @RequiresApi(25)
+        set(value) {
+            setProperty(TelecomCall.PROPERTY_HIGH_DEF_AUDIO, value)
+        }
+
+    @RequiresApi(25)
+    fun hasProperty(property: Int) = telecomConference.connectionProperties and property != 0
+
+    @RequiresApi(25)
+    fun setProperty(property: Int, on: Boolean) {
+        telecomConference.connectionProperties = if (on) {
+            telecomConference.connectionProperties.or(property)
+        } else {
+            telecomConference.connectionProperties.and(property.inv())
         }
     }
 }

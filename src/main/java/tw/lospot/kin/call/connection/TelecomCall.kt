@@ -11,6 +11,11 @@ object TelecomCall {
     const val EXTRA_DELAY_DISCONNECT = "tw.lospot.kin.call.delay_disconnect"
     const val EXTRA_DELAY_REJECT = "tw.lospot.kin.call.delay_reject"
     const val EXTRA_DELAY_ANSWER = "tw.lospot.kin.call.delay_answer"
+    const val EXTRA_HIGH_DEF_AUDIO = "tw.lospot.kin.call.hd_audio"
+    const val EXTRA_WIFI = "tw.lospot.kin.call.wifi"
+
+    const val PROPERTY_HIGH_DEF_AUDIO = 1 shl 2
+    const val PROPERTY_WIFI = 1 shl 3
 
     interface Listener {
         fun onStateChanged(state: Int)
@@ -23,6 +28,8 @@ object TelecomCall {
         val conferenceable: Conferenceable
         val videoState: Int
         val phoneAccountHandle: PhoneAccountHandle
+        var isWifiCall: Boolean
+        var isHdAudio: Boolean
         fun answer(videoState: Int)
         fun unhold()
         fun hold()

@@ -1,8 +1,10 @@
 package tw.lospot.kin.call.viewholder
 
+import android.os.Build
 import android.telecom.VideoProfile
 import android.view.View
 import android.widget.ArrayAdapter
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.Spinner
 import tw.lospot.kin.call.R
@@ -29,7 +31,9 @@ class NewCallDetail(view: View) {
                 },
                 answerDelay = answerDelayET?.text.toString().toLongOrNull() ?: 0,
                 rejectDelay = rejectDelayET?.text.toString().toLongOrNull() ?: 0,
-                disconnectDelay = disconnectDelayET.text.toString().toLongOrNull() ?: 0
+                disconnectDelay = disconnectDelayET.text.toString().toLongOrNull() ?: 0,
+                isHdAudio = hdAudioCheckBox.isChecked,
+                isWifi = wifiCallCheckBox.isChecked
         )
 
 
@@ -44,5 +48,10 @@ class NewCallDetail(view: View) {
     private val rejectDelayET by lazy { view.findViewById<EditText?>(R.id.rejectDelay) }
     private val disconnectDelayET by lazy { view.findViewById<EditText>(R.id.disconnectDelay) }
 
-
+    private val hdAudioCheckBox = view.findViewById<CheckBox>(R.id.hdAudio).apply {
+        if (Build.VERSION.SDK_INT < 25) visibility = View.GONE
+    }
+    private val wifiCallCheckBox = view.findViewById<CheckBox>(R.id.wifi).apply {
+        if (Build.VERSION.SDK_INT < 25) visibility = View.GONE
+    }
 }
