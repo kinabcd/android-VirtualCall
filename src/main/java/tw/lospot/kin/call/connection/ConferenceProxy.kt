@@ -17,10 +17,10 @@ class ConferenceProxy(val context: Context, override val phoneAccountHandle: Pho
     val telecomConference = object : Conference(phoneAccountHandle) {
         init {
             connectionCapabilities = connectionCapabilities
-                    .or(Connection.CAPABILITY_SUPPORT_HOLD)
-                    .or(Connection.CAPABILITY_HOLD)
-                    .or(Connection.CAPABILITY_MUTE)
-                    .or(Connection.CAPABILITY_MANAGE_CONFERENCE)
+                    .or(CAPABILITY_SUPPORT_HOLD)
+                    .or(CAPABILITY_HOLD)
+                    .or(CAPABILITY_MUTE)
+                    .or(CAPABILITY_MANAGE_CONFERENCE)
             setActive()
         }
 
@@ -41,10 +41,6 @@ class ConferenceProxy(val context: Context, override val phoneAccountHandle: Pho
                 return
             }
             addConnection(connection)
-            connection.connectionCapabilities = connection.connectionCapabilities
-                    .or(CAPABILITY_DISCONNECT_FROM_CONFERENCE)
-                    .or(CAPABILITY_SEPARATE_FROM_CONFERENCE)
-            connection.setActive()
             unhold()
         }
 
@@ -56,9 +52,28 @@ class ConferenceProxy(val context: Context, override val phoneAccountHandle: Pho
                     .and(CAPABILITY_DISCONNECT_FROM_CONFERENCE.inv())
                     .and(CAPABILITY_SEPARATE_FROM_CONFERENCE.inv())
             removeConnection(connection)
-            connection.setActive()
+            when {
+                connections.size == 0 -> destroy()
+                connections.size == 1 -> {
+                    if (state == STATE_ACTIVE)
+                        connection.setActive()
+                    else {
+                        connection.setOnHold()
+                    }
+                    val anotherConnection = connections[0]
+                    anotherConnection.setOnHold()
+                    anotherConnection.connectionCapabilities = anotherConnection.connectionCapabilities
+                            .and(CAPABILITY_DISCONNECT_FROM_CONFERENCE.inv())
+                            .and(CAPABILITY_SEPARATE_FROM_CONFERENCE.inv())
+                    removeConnection(anotherConnection)
+                    anotherConnection.onStateChanged(anotherConnection.state)
+                    setDisconnected(DisconnectCause(DisconnectCause.OTHER))
+                    destroy()
+                }
+                else -> connection.setOnHold()
+            }
             connection.onStateChanged(connection.state)
-            maybeDestroy()
+            notifyStateChanged(state)
         }
 
         override fun onHold() {
@@ -110,14 +125,14 @@ class ConferenceProxy(val context: Context, override val phoneAccountHandle: Pho
 
     override fun isExternal(): Boolean =
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1 &&
-                    telecomConference.connectionProperties.and(android.telecom.Connection.PROPERTY_IS_EXTERNAL_CALL) > 0
+                    telecomConference.connectionProperties.and(PROPERTY_IS_EXTERNAL_CALL) > 0
 
     override fun pullExternalCall() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
             telecomConference.connectionCapabilities = telecomConference.connectionCapabilities
-                    .and(android.telecom.Connection.CAPABILITY_CAN_PULL_CALL.inv())
+                    .and(CAPABILITY_CAN_PULL_CALL.inv())
             telecomConference.connectionProperties = telecomConference.connectionProperties
-                    .and(android.telecom.Connection.PROPERTY_IS_EXTERNAL_CALL.inv())
+                    .and(PROPERTY_IS_EXTERNAL_CALL.inv())
             notifyStateChanged(state)
         }
     }
@@ -125,9 +140,9 @@ class ConferenceProxy(val context: Context, override val phoneAccountHandle: Pho
     override fun pushInternalCall() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
             telecomConference.connectionCapabilities = telecomConference.connectionCapabilities
-                    .or(android.telecom.Connection.CAPABILITY_CAN_PULL_CALL)
+                    .or(CAPABILITY_CAN_PULL_CALL)
             telecomConference.connectionProperties = telecomConference.connectionProperties
-                    .or(android.telecom.Connection.PROPERTY_IS_EXTERNAL_CALL)
+                    .or(PROPERTY_IS_EXTERNAL_CALL)
             notifyStateChanged(state)
         }
     }
@@ -163,6 +178,7 @@ class ConferenceProxy(val context: Context, override val phoneAccountHandle: Pho
             it.onDisconnect()
         }
     }
+
     override var isWifiCall: Boolean
         @RequiresApi(25)
         get() = hasProperty(TelecomCall.PROPERTY_WIFI)
