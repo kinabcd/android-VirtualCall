@@ -40,6 +40,7 @@ class ConferenceProxy(val context: Context, override val phoneAccountHandle: Pho
             if (connection === null) {
                 return
             }
+            addConnection(connection)
             connection.connectionCapabilities = connection.connectionCapabilities
                     .or(CAPABILITY_DISCONNECT_FROM_CONFERENCE)
                     .or(CAPABILITY_SEPARATE_FROM_CONFERENCE)
