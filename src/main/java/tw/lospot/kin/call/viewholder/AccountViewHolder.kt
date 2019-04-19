@@ -69,13 +69,13 @@ class AccountViewHolder(view: View) : BaseViewHolder(view),
     }
 
     private fun updateView() {
-        var resId = android.R.drawable.presence_invisible
+        var resId = R.drawable.phone_account_unregistered
         if (register.context.checkCallingOrSelfPermission(Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED) {
             phoneAccountHelper?.run {
                 resId = when {
-                    !isRegistered -> android.R.drawable.presence_invisible
-                    !isEnabled -> android.R.drawable.presence_busy
-                    else -> android.R.drawable.presence_online
+                    !isRegistered -> R.drawable.phone_account_unregistered
+                    !isEnabled -> R.drawable.phone_account_off
+                    else -> R.drawable.phone_account_on
                 }
             }
         }
