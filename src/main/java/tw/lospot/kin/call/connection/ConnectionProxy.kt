@@ -150,7 +150,7 @@ class ConnectionProxy(context: Context, request: ConnectionRequest) :
             Log.v(TAG, "onHandoverComplete")
         }
 
-        override fun requestBluetoothAudio(bluetoothDevice: BluetoothDevice?) {
+        override fun requestBluetoothAudio(bluetoothDevice: BluetoothDevice) {
             Log.v(TAG, "requestBluetoothAudio $bluetoothDevice")
         }
 
