@@ -50,6 +50,8 @@ object CallList {
 
     fun getAllCalls(): Set<Call> = sCalls
 
+    val rootCalls get() = getAllCalls().filterNot { it.hasParent }.toSet()
+
     fun isTracking(call: Call): Boolean = sCalls.contains(call)
 
     fun getCall(conferenceable: Conferenceable): Call? = sCallsByConferencable[conferenceable]

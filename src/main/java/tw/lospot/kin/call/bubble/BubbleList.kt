@@ -19,11 +19,11 @@ class BubbleList(val context: Context) : CallList.Listener {
     private val windowManager = context.getSystemService(WindowManager::class.java)
     private val bubbles = HashMap<Call, Bubble>()
     override fun onCallListChanged() {
-        val liveCalls = CallList.getAllCalls()
+        val liveCalls = CallList.rootCalls
         val iterator = bubbles.iterator()
         while (iterator.hasNext()) {
             val it = iterator.next()
-            if (it.key.hasParent || !liveCalls.contains(it.key)) {
+            if (!liveCalls.contains(it.key)) {
                 it.value.hide()
                 iterator.remove()
             }

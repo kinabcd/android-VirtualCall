@@ -6,6 +6,7 @@ import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.text.Editable
@@ -113,7 +114,8 @@ class InCallActivity : Activity(),
     }
 
     private fun maybeRequestDrawOverlays() {
-        if (!Settings.canDrawOverlays(this)) {
+        // Overlay permission is used by BubbleOverlays. On Q devices, we show bubble with notification.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q && !Settings.canDrawOverlays(this)) {
             Log.w(this, "checkDrawOverlays failed")
             startActivityForResult(
                     Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")),

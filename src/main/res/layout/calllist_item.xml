@@ -20,6 +20,15 @@
         android:orientation="horizontal">
 
         <ImageButton
+            android:id="@+id/answer"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:background="@null"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_answer_call"
+            android:tint="@android:color/holo_green_light" />
+
+        <ImageButton
             android:id="@+id/end"
             android:layout_width="32dp"
             android:layout_height="32dp"

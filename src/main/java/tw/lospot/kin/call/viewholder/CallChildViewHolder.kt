@@ -19,6 +19,6 @@ class CallChildViewHolder(view: View) : BaseViewHolder(view) {
     }
 
     private fun updateView() {
-        name.text = call?.getName()
+        name.text = call?.name
     }
 }

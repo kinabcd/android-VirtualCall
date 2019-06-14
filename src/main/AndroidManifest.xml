@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="tw.lospot.kin.call">
 
     <uses-permission android:name="android.permission.READ_CONTACTS" />
@@ -12,6 +13,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CALL_PHONE" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
     <application
         android:allowBackup="true"
@@ -19,7 +21,8 @@
         android:icon="@mipmap/ic_launcher"
         android:label="@string/title_in_call_manager"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Toolkit">
+        android:theme="@style/Theme.Toolkit"
+        tools:ignore="GoogleAppIndexingWarning">
         <service
             android:name=".connection.ConnectionService"
             android:label="Kin Test Connection"
@@ -31,7 +34,10 @@
 
         <activity
             android:name=".InCallActivity"
+            android:allowEmbedded="true"
+            android:documentLaunchMode="always"
             android:label="@string/title_in_call_manager"
+            android:resizeableActivity="true"
             android:theme="@style/Theme.Toolkit">
             <intent-filter>
                 <action android:name="android.telecom.action.CONFIGURE_PHONE_ACCOUNT" />

@@ -49,13 +49,13 @@ class Call(val telecomCall: TelecomCall.Common) : TelecomCall.Listener {
         }
     }
 
-    fun getName(): String {
-        return when (telecomCall) {
+    val name
+        get() = when (telecomCall) {
             is ConferenceProxy -> "Conference Call"
-            is ConnectionProxy -> telecomCall.telecomConnection.address?.schemeSpecificPart ?: ""
+            is ConnectionProxy -> telecomCall.telecomConnection.address?.schemeSpecificPart
+                    ?: ""
             else -> ""
         }
-    }
 
     fun hold() {
         telecomCall.hold()
@@ -98,7 +98,7 @@ class Call(val telecomCall: TelecomCall.Common) : TelecomCall.Listener {
             }
             val children = ArrayList<Call>()
             telecomCall.telecomConference.connections
-                    .map { it -> CallList.getCall(it) }
+                    .map { CallList.getCall(it) }
                     .forEach { if (it != null) children.add(it) }
             return children
         }
