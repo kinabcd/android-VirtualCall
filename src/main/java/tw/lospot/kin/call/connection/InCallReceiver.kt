@@ -13,29 +13,33 @@ class InCallReceiver : BroadcastReceiver() {
     companion object {
         private const val ACTION_CALL = "tw.lospot.Call.OutgoingCall"
         private const val ACTION_INCOMING_CALL = "tw.lospot.Call.IncomingCall"
-        private const val ACTION_DISCONNECT = "tw.lospot.Call.Disconnect"
+        const val ACTION_DISCONNECT = "tw.lospot.Call.Disconnect"
         private const val ACTION_UPGRADE = "tw.lospot.Call.Upgrade"
-        private const val ACTION_ANSWER = "tw.lospot.Call.Answer"
+        const val ACTION_ANSWER = "tw.lospot.Call.Answer"
+
+        const val EXTRA_CALL_ID = "callId"
     }
 
     override fun onReceive(context: Context, intent: Intent) {
-        Log.v(this, "onReceive " + intent.action)
         when (intent.action) {
             ACTION_CALL -> {
+                Log.v(this, "ACTION_CALL")
                 intent.data?.let { data ->
                     val videoState = intent.getIntExtra("video", VideoProfile.STATE_AUDIO_ONLY)
                     PhoneAccountHelper(context).addOutgoingCall(context, data, CallParameters(videoState = videoState))
                 }
             }
             ACTION_INCOMING_CALL -> {
+                Log.v(this, "ACTION_INCOMING_CALL")
                 intent.data?.let { data ->
                     val videoState = intent.getIntExtra("video", VideoProfile.STATE_AUDIO_ONLY)
                     PhoneAccountHelper(context).addIncomingCall(context, data, CallParameters(videoState = videoState))
                 }
             }
             ACTION_DISCONNECT -> {
-                val call = if (intent.hasExtra("callId")) {
-                    val callId = intent.getIntExtra("callId", -1)
+                val callId = intent.getIntExtra(EXTRA_CALL_ID, -1)
+                Log.v(this, "(Call_$callId) ACTION_DISCONNECT")
+                val call = if (callId != -1) {
                     CallList.getAllCalls().firstOrNull { it.id == callId }
                 } else {
                     CallList.getAllCalls().firstOrNull()
@@ -59,8 +63,9 @@ class InCallReceiver : BroadcastReceiver() {
                 call?.disconnect(disconnectCause)
             }
             ACTION_UPGRADE -> {
-                val call = if (intent.hasExtra("callId")) {
-                    val callId = intent.getIntExtra("callId", -1)
+                val callId = intent.getIntExtra(EXTRA_CALL_ID, -1)
+                Log.v(this, "(Call_$callId) ACTION_UPGRADE")
+                val call = if (callId != -1) {
                     CallList.getAllCalls().firstOrNull { it.id == callId }
                 } else {
                     CallList.getAllCalls().firstOrNull()
@@ -71,8 +76,9 @@ class InCallReceiver : BroadcastReceiver() {
                 }
             }
             ACTION_ANSWER -> {
-                val call = if (intent.hasExtra("callId")) {
-                    val callId = intent.getIntExtra("callId", -1)
+                val callId = intent.getIntExtra(EXTRA_CALL_ID, -1)
+                Log.v(this, "(Call_$callId) ACTION_ANSWER")
+                val call = if (callId != -1) {
                     CallList.getAllCalls().firstOrNull { it.id == callId }
                 } else {
                     CallList.getAllCalls().firstOrNull()

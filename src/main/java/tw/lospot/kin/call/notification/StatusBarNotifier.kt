@@ -10,10 +10,12 @@ import android.graphics.Canvas
 import android.graphics.Rect
 import android.graphics.drawable.Icon
 import android.os.Build
+import android.telecom.Connection
 import tw.lospot.kin.call.InCallActivity
 import tw.lospot.kin.call.R
 import tw.lospot.kin.call.connection.Call
 import tw.lospot.kin.call.connection.CallList
+import tw.lospot.kin.call.connection.InCallReceiver
 
 class StatusBarNotifier(private val context: Context) : CallList.Listener {
     companion object {
@@ -45,6 +47,7 @@ class StatusBarNotifier(private val context: Context) : CallList.Listener {
                 setOngoing(true)
                 setGroup(GROUP_KEY)
                 setContentTitle(it.name)
+                createActions(it).forEach { action -> addAction(action) }
             }
             notificationManager.notify("${it.id}", NOTIFICATION_ID, builder.build())
         }
@@ -63,6 +66,48 @@ class StatusBarNotifier(private val context: Context) : CallList.Listener {
         if (context is Service) {
             context.stopForeground(true)
         }
+    }
+
+    private fun createActions(call: Call): List<Notification.Action> {
+        return when (call.state) {
+            Connection.STATE_DIALING -> arrayListOf(
+                    createAnswerAction(call.id),
+                    createDisconnectAction(call.id)
+            )
+            else -> arrayListOf(
+                    createDisconnectAction(call.id)
+            )
+        }
+    }
+
+    private fun createAnswerAction(callId: Int): Notification.Action {
+        return Notification.Action.Builder(
+                Icon.createWithResource(context, R.drawable.ic_answer_call),
+                context.getString(R.string.answer_call),
+                PendingIntent.getBroadcast(context,
+                        callId,
+                        createSelfIntent(InCallReceiver.ACTION_ANSWER, callId),
+                        PendingIntent.FLAG_UPDATE_CURRENT
+                )
+        ).build()
+    }
+
+    private fun createDisconnectAction(callId: Int): Notification.Action {
+        return Notification.Action.Builder(
+                Icon.createWithResource(context, R.drawable.ic_end_call),
+                context.getString(R.string.disconnect_call),
+                PendingIntent.getBroadcast(context,
+                        callId,
+                        createSelfIntent(InCallReceiver.ACTION_DISCONNECT, callId),
+                        PendingIntent.FLAG_UPDATE_CURRENT
+                )
+        ).build()
+    }
+
+    private fun createSelfIntent(action: String, callId: Int): Intent {
+        return Intent(action)
+                .setPackage(context.packageName)
+                .putExtra(InCallReceiver.EXTRA_CALL_ID, callId)
     }
 
     private fun createSummaryNotification(): Notification {

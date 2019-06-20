@@ -21,6 +21,8 @@ import kotlinx.android.synthetic.main.bubble.view.*
 import tw.lospot.kin.call.Log
 import tw.lospot.kin.call.R
 import tw.lospot.kin.call.connection.Call
+import kotlin.math.pow
+import kotlin.math.sqrt
 
 /**
  * Created by Kin_Lo on 2018/2/27.
@@ -284,16 +286,20 @@ class Bubble(context: Context, private val call: Call) : Call.Listener {
     }
 
     private fun gerAnswerAction(): BubbleAction {
-        return BubbleAction(Icon.createWithResource(packageName, R.drawable.ic_answer_call)
-                .setTint(resources.getColor(android.R.color.holo_green_light, null)), "Answer") {
+        return BubbleAction(
+                Icon.createWithResource(packageName, R.drawable.ic_answer_call)
+                        .setTint(resources.getColor(android.R.color.holo_green_light, null)),
+                resources.getString(R.string.answer_call)) {
             call.answer()
             collapse()
         }
     }
 
     private fun gerDisconnectAction(): BubbleAction {
-        return BubbleAction(Icon.createWithResource(packageName, R.drawable.ic_end_call)
-                .setTint(resources.getColor(android.R.color.holo_red_light, null)), "Disconnect") {
+        return BubbleAction(
+                Icon.createWithResource(packageName, R.drawable.ic_end_call)
+                        .setTint(resources.getColor(android.R.color.holo_red_light, null)),
+                resources.getString(R.string.disconnect_call)) {
             call.disconnect()
             collapse()
         }
@@ -329,7 +335,7 @@ class Bubble(context: Context, private val call: Call) : Call.Listener {
                     val deltaY = motionEvent.rawY.toInt() - downPoint.y
                     x = downViewPoint.x + deltaX
                     y = downViewPoint.y + deltaY
-                    if (maybeClick && Math.sqrt(Math.pow(deltaX.toDouble(), 2.0) + Math.pow(deltaY.toDouble(), 2.0)) > clickThreshold) {
+                    if (maybeClick && sqrt(deltaX.toDouble().pow(2.0) + deltaY.toDouble().pow(2.0)) > clickThreshold) {
                         maybeClick = false
                         if (targetState == State.EXPANDED) {
                             actionsView.hide {

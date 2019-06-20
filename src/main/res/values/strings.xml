@@ -6,4 +6,7 @@
     <string name="video_state_tx_only">Tx Only</string>
     <string name="video_state_rx_only">Rx Only</string>
     <string name="video_state_bidirectional">Bidirectional</string>
+
+    <string name="answer_call">Answer</string>
+    <string name="disconnect_call">Disconnect</string>
 </resources>
