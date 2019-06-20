@@ -20,7 +20,7 @@ package tw.lospot.kin.call
  * Manages logging for the entire class.
  */
 object Log {
-    private const val TAG = "KinToolkit"
+    private const val TAG = "KinCall"
 
     fun d(obj: Any, msg: String) {
         android.util.Log.d(TAG, delimit(getPrefix(obj)) + msg)
@@ -64,5 +64,5 @@ object Log {
         else -> obj.javaClass.simpleName
     }
 
-    private fun delimit(tag: String): String = tag + " - "
+    private fun delimit(tag: String): String = "$tag - "
 }

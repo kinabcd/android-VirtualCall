@@ -7,7 +7,7 @@ import android.util.TypedValue
 import android.view.WindowManager
 import tw.lospot.kin.call.connection.Call
 import tw.lospot.kin.call.connection.CallList
-import java.util.*
+import kotlin.math.min
 
 /**
  * Created by Kin_Lo on 2018/2/27.
@@ -38,7 +38,7 @@ class BubbleList(val context: Context) : CallList.Listener {
                         while (isSpaceUsed(defaultY)) {
                             defaultY += px64dp
                         }
-                        y = Math.min(defaultY, windowSize.y - px64dp)
+                        y = min(defaultY, windowSize.y - px64dp)
                         show()
                     }
                 }

@@ -4,9 +4,9 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.PixelFormat
 import android.os.Build
-import androidx.recyclerview.widget.LinearLayoutManager
 import android.view.*
 import android.view.animation.DecelerateInterpolator
+import androidx.recyclerview.widget.LinearLayoutManager
 import kotlinx.android.synthetic.main.bubble_action_box.view.*
 import tw.lospot.kin.call.R
 
@@ -42,10 +42,10 @@ class BubbleActionBox(context: Context) {
     private val adapter by lazy { BubbleActionAdapter(context) }
 
     private val rootView by lazy {
-        val field = layoutInflater.inflate(R.layout.bubble_action_box, null, false)
-        field.actions.layoutManager = LinearLayoutManager(context)
-        field.actions.adapter = adapter
-        return@lazy field
+        layoutInflater.inflate(R.layout.bubble_action_box, null, false).apply {
+            actions.layoutManager = LinearLayoutManager(context)
+            actions.adapter = adapter
+        }
     }
 
     private val rootParam by lazy {

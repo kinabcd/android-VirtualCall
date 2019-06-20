@@ -13,7 +13,8 @@ import android.telecom.Connection.*
 import android.util.TypedValue
 import android.util.TypedValue.COMPLEX_UNIT_DIP
 import android.view.*
-import android.view.Gravity.*
+import android.view.Gravity.LEFT
+import android.view.Gravity.TOP
 import android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
 import android.view.WindowManager.LayoutParams.TYPE_PHONE
 import android.view.animation.OvershootInterpolator

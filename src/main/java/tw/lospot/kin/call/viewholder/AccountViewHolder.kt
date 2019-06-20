@@ -6,7 +6,6 @@ import android.content.pm.PackageManager
 import android.telecom.TelecomManager
 import android.view.View
 import android.widget.ImageButton
-import android.widget.ImageView
 import android.widget.TextView
 import tw.lospot.kin.call.R
 import tw.lospot.kin.call.phoneaccount.PhoneAccountHelper
