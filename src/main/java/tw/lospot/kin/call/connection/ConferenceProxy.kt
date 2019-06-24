@@ -24,7 +24,7 @@ class ConferenceProxy(val context: Context, override val phoneAccountHandle: Pho
             setActive()
         }
 
-        override fun getVideoProvider(): Connection.VideoProvider = VideoProvider(context)
+        override fun getVideoProvider(): Connection.VideoProvider? = null
         override fun getVideoState(): Int = VideoProfile.STATE_AUDIO_ONLY
         override fun onConnectionAdded(connection: Connection?) {
             if (connection === null) {

@@ -10,30 +10,75 @@ import android.view.Surface
 import tw.lospot.kin.call.Log
 import tw.lospot.kin.call.R
 import tw.lospot.kin.call.units.Camera
+import kotlin.properties.Delegates
 
 /**
  * Video emulator
  * Created by Kin_Lo on 2017/8/9.
  */
 
-class VideoProvider(private val context: Context) : android.telecom.Connection.VideoProvider() {
-    var connection: ConnectionProxy? = null
-    var previewSurface: Surface? = null
-    var displaySurface: Surface? = null
-    var camera: Camera? = null
-    private var mediaPlayer = MediaPlayer.create(context, R.raw.jino)
-    override fun onSetPreviewSurface(surface: Surface?) {
-        Log.v(this, "onSetPreviewSurface $surface")
-        if (previewSurface != surface) {
-            if (previewSurface != null) {
-                camera?.removePreviewSurface(previewSurface!!)
-            }
-            previewSurface?.release()
-            if (surface != null) {
-                camera?.addPreviewSurface(surface)
+class VideoProvider(private val context: Context, private val connection: ConnectionProxy) : android.telecom.Connection.VideoProvider() {
+    private var previewSurface: Surface? = null
+        set(new) {
+            val old = field
+            if (old != new) {
+                field = new
+                Log.v(this, "previewSurface $old -> $new")
+                old?.let {
+                    camera?.removePreviewSurface(it)
+                }
+                new?.let {
+                    camera?.addPreviewSurface(it)
+                }
             }
         }
+    private var displaySurface: Surface? = null
+        set(new) {
+            val old = field
+            if (old != new) {
+                field = new
+                Log.v(this, "displaySurface $old -> $new")
+
+                if (new != null) {
+                    changePeerDimensions(mediaPlayer.videoWidth, mediaPlayer.videoHeight)
+                    mediaPlayer.setSurface(new)
+                    mediaPlayer.setVideoScalingMode(MediaPlayer.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING)
+                    mediaPlayer.isLooping = true
+                    mediaPlayer.start()
+                } else {
+                    mediaPlayer.setSurface(null)
+                    if (mediaPlayer.isPlaying) {
+                        mediaPlayer.stop()
+                    }
+                }
+            }
+        }
+    private var cameraId by Delegates.observable<String?>(null) { _, old, new ->
+        if (old != new) {
+            Log.v(this, "cameraId $old -> $new")
+            if (new != null) {
+                camera = Camera(context, new)
+            } else {
+                camera = null
+            }
+        }
+    }
+    private var camera by Delegates.observable<Camera?>(null) { _, old, new ->
+        if (old != new) {
+            previewSurface?.let { surface ->
+                old?.removePreviewSurface(surface)
+                old?.release()
+                new?.addPreviewSurface(surface)
+            }
+        }
+    }
+    private val mediaPlayer by lazy { MediaPlayer.create(context, R.raw.jino) }
+    override fun onSetPreviewSurface(surface: Surface?) {
         previewSurface = surface
+    }
+
+    override fun onSetDisplaySurface(surface: Surface?) {
+        displaySurface = surface
     }
 
     override fun onRequestCameraCapabilities() {
@@ -46,47 +91,11 @@ class VideoProvider(private val context: Context) : android.telecom.Connection.V
     }
 
     override fun onSetCamera(cameraId: String?) {
-        val oldCameraId = camera?.cameraId
-        Log.v(this, "onSetCamera $oldCameraId -> $cameraId")
-        if (oldCameraId == cameraId) {
-            return
-        }
-        if (previewSurface != null) {
-            camera?.removePreviewSurface(previewSurface!!)
-        }
-        camera?.release()
-        camera = null
-        if (cameraId != null) {
-            camera = Camera(context, cameraId)
-            if (previewSurface != null) {
-                camera?.addPreviewSurface(previewSurface!!)
-            }
-        }
+        this.cameraId = cameraId
     }
 
     override fun onSetDeviceOrientation(orientation: Int) {
         Log.i(this, "onSetDeviceOrientation $orientation")
-    }
-
-    override fun onSetDisplaySurface(surface: Surface?) {
-        Log.v(this, "onSetDisplaySurface $surface")
-        if (displaySurface != surface) {
-            if (displaySurface == null) {
-                changePeerDimensions(mediaPlayer.videoWidth, mediaPlayer.videoHeight)
-            }
-            displaySurface = surface
-            if (surface != null) {
-                mediaPlayer.setSurface(surface)
-                mediaPlayer.setVideoScalingMode(MediaPlayer.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING)
-                mediaPlayer.isLooping = true
-                mediaPlayer.start()
-            } else {
-                mediaPlayer.setSurface(null)
-                if (mediaPlayer.isPlaying) {
-                    mediaPlayer.stop()
-                }
-            }
-        }
     }
 
     override fun onSendSessionModifyRequest(fromProfile: VideoProfile?, toProfile: VideoProfile?) {
@@ -94,14 +103,14 @@ class VideoProvider(private val context: Context) : android.telecom.Connection.V
         if (toProfile == null) {
             return
         }
-        val delayTime = when (connection!!.videoState) {
+        val delayTime = when (connection.videoState) {
             VideoProfile.STATE_AUDIO_ONLY -> 3000L
             else -> 100L
         }
 
         Handler().postDelayed({
             receiveSessionModifyResponse(SESSION_MODIFY_REQUEST_SUCCESS, fromProfile, toProfile)
-            connection?.videoState = toProfile.videoState
+            connection.videoState = toProfile.videoState
         }, delayTime)
     }
 
@@ -120,6 +129,6 @@ class VideoProvider(private val context: Context) : android.telecom.Connection.V
         if (responseProfile == null) {
             return
         }
-        connection?.videoState = responseProfile.videoState
+        connection.videoState = responseProfile.videoState
     }
 }

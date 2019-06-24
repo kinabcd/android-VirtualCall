@@ -10,23 +10,24 @@ import android.os.Handler
 import androidx.annotation.MainThread
 import android.view.Surface
 import tw.lospot.kin.call.Log
+import java.lang.Exception
 
 
-class Camera(private val mContext: Context, val cameraId: String) {
+class Camera(private val context: Context, val cameraId: String) {
 
-    private val mCameraManager: CameraManager = mContext.getSystemService(CameraManager::class.java)
-    private var mCameraDevice: CameraDevice? = null
+    private val cameraManager: CameraManager = context.getSystemService(CameraManager::class.java)
+    private var cameraDevice: CameraDevice? = null
 
-    private val mPreviewSurfaces: MutableList<Surface> = ArrayList()
-    private var mPreviewSession: CameraCaptureSession? = null
-    private var mPreviewRepeatingId: Int? = -1
+    private val previewSurfaces: MutableList<Surface> = ArrayList()
+    private var previewSession: CameraCaptureSession? = null
+    private var previewRepeatingId: Int? = -1
 
     private var isCameraOpening: Boolean = false
     private var isCameraClosing: Boolean = false
     private var isSessionCreating: Boolean = false
 
     private fun checkPermission(): Boolean =
-            mContext.checkSelfPermission(android.Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+            context.checkSelfPermission(android.Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
 
     @MainThread
     fun release() {
@@ -38,21 +39,21 @@ class Camera(private val mContext: Context, val cameraId: String) {
     @MainThread
     fun addPreviewSurface(surface: Surface) {
         Log.d(this, "($cameraId) addPreviewSurface $surface")
-        mPreviewSurfaces.add(surface)
+        previewSurfaces.add(surface)
         updatePreview()
     }
 
     @MainThread
     fun removePreviewSurface(surface: Surface) {
         Log.d(this, "($cameraId) removePreviewSurface $surface")
-        mPreviewSurfaces.remove(surface)
+        previewSurfaces.remove(surface)
         updatePreview()
     }
 
     private fun updatePreview() {
         destroyPreviewSession()
-        if (mPreviewSurfaces.size > 0) {
-            if (mCameraDevice == null) {
+        if (previewSurfaces.size > 0) {
+            if (cameraDevice == null) {
                 openCamera()
             } else {
                 createPreviewSession()
@@ -65,10 +66,10 @@ class Camera(private val mContext: Context, val cameraId: String) {
             Log.w(this, "($cameraId) openCamera: Permission denied")
             return
         }
-        if (!isCameraOpening && mCameraDevice == null) {
+        if (!isCameraOpening && cameraDevice == null) {
             Log.d(this, "($cameraId) openCamera")
             isCameraOpening = true
-            mCameraManager.openCamera(cameraId, DeviceStateCallback(), null)
+            cameraManager.openCamera(cameraId, DeviceStateCallback(), null)
         }
     }
 
@@ -79,8 +80,8 @@ class Camera(private val mContext: Context, val cameraId: String) {
         Log.d(this, "($cameraId) closeCamera")
         isCameraClosing = true
         isCameraOpening = false
-        mCameraDevice?.close()
-        mCameraDevice = null
+        cameraDevice?.close()
+        cameraDevice = null
     }
 
     inner class DeviceStateCallback : CameraDevice.StateCallback() {
@@ -88,8 +89,8 @@ class Camera(private val mContext: Context, val cameraId: String) {
             if (isCameraOpening) {
                 Log.d(this@Camera, "($cameraId) onOpened")
                 isCameraOpening = false
-                mCameraDevice = camera
-                if (mPreviewSurfaces.size > 0) {
+                cameraDevice = camera
+                if (previewSurfaces.size > 0) {
                     createPreviewSession()
                 }
             } else {
@@ -103,9 +104,9 @@ class Camera(private val mContext: Context, val cameraId: String) {
             camera.close()
             isCameraClosing = false
             isCameraOpening = false
-            mCameraDevice = null
-            mPreviewSession = null
-            mPreviewRepeatingId = -1
+            cameraDevice = null
+            previewSession = null
+            previewRepeatingId = -1
         }
 
         override fun onError(camera: CameraDevice, error: Int) {
@@ -120,28 +121,28 @@ class Camera(private val mContext: Context, val cameraId: String) {
     }
 
     private fun createPreviewSession() {
-        if (!isSessionCreating && mPreviewSurfaces.size > 0 && mPreviewSession == null) {
+        if (!isSessionCreating && previewSurfaces.size > 0 && previewSession == null) {
             Log.d(this, "($cameraId) createPreviewSession")
             isSessionCreating = true
             try {
-                mCameraDevice?.createCaptureSession(ArrayList(mPreviewSurfaces), PreviewSessionStateCallback(), null)
+                cameraDevice?.createCaptureSession(ArrayList(previewSurfaces), PreviewSessionStateCallback(), null)
             } catch (e: CameraAccessException) {
-                mCameraDevice = null
+                cameraDevice = null
             }
         }
     }
 
     private fun destroyPreviewSession() {
-        if (mPreviewSession == null) {
+        if (previewSession == null) {
             return
         }
         Log.d(this, "($cameraId) destroyPreviewSession")
-        if (mPreviewRepeatingId != -1) {
-            mPreviewSession?.stopRepeating()
-            mPreviewRepeatingId = -1
+        if (previewRepeatingId != -1) {
+            previewSession?.stopRepeating()
+            previewRepeatingId = -1
         }
-        mPreviewSession?.close()
-        mPreviewSession = null
+        previewSession?.close()
+        previewSession = null
     }
 
     private inner class PreviewSessionStateCallback : CameraCaptureSession.StateCallback() {
@@ -149,7 +150,7 @@ class Camera(private val mContext: Context, val cameraId: String) {
         override fun onConfigured(session: CameraCaptureSession) {
             Log.d(this@Camera, "($cameraId) onConfigured")
             isSessionCreating = false
-            mPreviewSession = session
+            previewSession = session
             startPreviewRepeating()
         }
 
@@ -157,21 +158,25 @@ class Camera(private val mContext: Context, val cameraId: String) {
             Log.d(this@Camera, "($cameraId) onConfigureFailed")
             session.close()
             isSessionCreating = false
-            mPreviewSession = null
-            mPreviewRepeatingId = -1
+            previewSession = null
+            previewRepeatingId = -1
         }
     }
 
     private fun startPreviewRepeating() {
         Log.d(this, "($cameraId) startPreviewRepeating")
-        val newSurfaces = ArrayList(mPreviewSurfaces)
-        val previewBuilder = mCameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+        val newSurfaces = ArrayList(previewSurfaces)
+        val previewBuilder = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
         newSurfaces.forEach { previewBuilder?.addTarget(it) }
-        if (mPreviewRepeatingId != -1) {
-            mPreviewSession?.stopRepeating()
+        if (previewRepeatingId != -1) {
+            previewSession?.stopRepeating()
         }
         if (previewBuilder != null) {
-            mPreviewRepeatingId = mPreviewSession?.setRepeatingRequest(previewBuilder.build(), null, null)
+            try {
+                previewRepeatingId = previewSession?.setRepeatingRequest(previewBuilder.build(), null, null)
+            } catch (e: Exception) {
+                Log.w(this, "($cameraId) startPreviewRepeating: failed. surfaces=$newSurfaces ${e.message}")
+            }
         }
     }
 }

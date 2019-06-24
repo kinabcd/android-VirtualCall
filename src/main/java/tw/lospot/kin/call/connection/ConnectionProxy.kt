@@ -201,7 +201,7 @@ class ConnectionProxy(context: Context, request: ConnectionRequest) :
             field = value
             field?.start()
         }
-    val videoProvider = VideoProvider(context)
+    val videoProvider = VideoProvider(context, this)
     override var listener: TelecomCall.Listener? = null
 
     override val conferenceable: Conferenceable get() = telecomConnection
@@ -231,7 +231,6 @@ class ConnectionProxy(context: Context, request: ConnectionRequest) :
 
     init {
         Log.v(TAG, "request=$request")
-        videoProvider.connection = this
         telecomConnection.videoProvider = videoProvider
         telecomConnection.setVideoState(videoState)
         if (Build.VERSION.SDK_INT >= 28 && request.isRequestingRtt) {
@@ -247,7 +246,7 @@ class ConnectionProxy(context: Context, request: ConnectionRequest) :
 
     private fun notifyStateChanged() {
         telecomConnection.connectionCapabilities = when (state) {
-            Connection.STATE_ACTIVE -> telecomConnection.connectionCapabilities
+            STATE_ACTIVE -> telecomConnection.connectionCapabilities
                     .or(CAPABILITY_CAN_UPGRADE_TO_VIDEO)
                     .or(CAPABILITY_SUPPORTS_VT_LOCAL_BIDIRECTIONAL)
                     .or(CAPABILITY_SUPPORTS_VT_REMOTE_BIDIRECTIONAL)
@@ -297,7 +296,7 @@ class ConnectionProxy(context: Context, request: ConnectionRequest) :
 
     override fun isExternal(): Boolean =
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1 &&
-                    telecomConnection.connectionProperties.and(Connection.PROPERTY_IS_EXTERNAL_CALL) > 0
+                    telecomConnection.connectionProperties.and(PROPERTY_IS_EXTERNAL_CALL) > 0
 
     override fun pullExternalCall() {
         if (Build.VERSION.SDK_INT < 25) {
@@ -306,9 +305,9 @@ class ConnectionProxy(context: Context, request: ConnectionRequest) :
         telecomConnection.setPulling()
         Handler().postDelayed({
             telecomConnection.connectionCapabilities = telecomConnection.connectionCapabilities
-                    .and(Connection.CAPABILITY_CAN_PULL_CALL.inv())
+                    .and(CAPABILITY_CAN_PULL_CALL.inv())
             telecomConnection.connectionProperties = telecomConnection.connectionProperties
-                    .and(Connection.PROPERTY_IS_EXTERNAL_CALL.inv())
+                    .and(PROPERTY_IS_EXTERNAL_CALL.inv())
             telecomConnection.setActive()
         }, 1000)
     }
@@ -316,9 +315,9 @@ class ConnectionProxy(context: Context, request: ConnectionRequest) :
     override fun pushInternalCall() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
             telecomConnection.connectionCapabilities = telecomConnection.connectionCapabilities
-                    .or(Connection.CAPABILITY_CAN_PULL_CALL)
+                    .or(CAPABILITY_CAN_PULL_CALL)
             telecomConnection.connectionProperties = telecomConnection.connectionProperties
-                    .or(Connection.PROPERTY_IS_EXTERNAL_CALL)
+                    .or(PROPERTY_IS_EXTERNAL_CALL)
             notifyStateChanged()
         }
     }
