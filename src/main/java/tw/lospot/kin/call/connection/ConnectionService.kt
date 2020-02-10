@@ -1,6 +1,5 @@
 package tw.lospot.kin.call.connection
 
-import android.os.Build
 import android.telecom.*
 import tw.lospot.kin.call.Log
 import tw.lospot.kin.call.bubble.BubbleList
@@ -14,17 +13,13 @@ class ConnectionService : android.telecom.ConnectionService() {
     override fun onCreate() {
         super.onCreate()
         notification.setUp()
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-            bubbleList.setUp()
-        }
+        bubbleList.setUp()
     }
 
     override fun onDestroy() {
         super.onDestroy()
         notification.cleanUp()
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-            bubbleList.cleanUp()
-        }
+        bubbleList.cleanUp()
     }
 
     override fun onCreateIncomingConnection(connectionManagerPhoneAccount: PhoneAccountHandle, request: ConnectionRequest): Connection {

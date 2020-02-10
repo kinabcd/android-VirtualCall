@@ -10,6 +10,7 @@ import android.graphics.Canvas
 import android.graphics.Rect
 import android.graphics.drawable.Icon
 import android.os.Build
+import android.provider.Settings
 import android.telecom.Connection
 import tw.lospot.kin.call.InCallActivity
 import tw.lospot.kin.call.R
@@ -122,7 +123,7 @@ class StatusBarNotifier(private val context: Context) : CallList.Listener {
             setContentTitle("InCall")
         }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && !Settings.canDrawOverlays(context)) {
             val bubbleData = Notification.BubbleMetadata.Builder()
                     .setDesiredHeight(600)
                     .setIcon(bubbleIcon)
