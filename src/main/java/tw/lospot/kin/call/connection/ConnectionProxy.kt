@@ -206,7 +206,7 @@ class ConnectionProxy(context: Context, request: ConnectionRequest) :
 
     override val conferenceable: Conferenceable get() = telecomConnection
     override val state: Int get() = telecomConnection.state
-    override var videoState: Int = request.extras.getInt(TelecomManager.EXTRA_START_CALL_WITH_VIDEO_STATE, VideoProfile.STATE_AUDIO_ONLY)
+    override var videoState: Int = 0
         set(value) {
             field = value
             telecomConnection.setVideoState(value)
@@ -232,7 +232,7 @@ class ConnectionProxy(context: Context, request: ConnectionRequest) :
     init {
         Log.v(TAG, "request=$request")
         telecomConnection.videoProvider = videoProvider
-        telecomConnection.setVideoState(videoState)
+        telecomConnection.setVideoState(request.videoState)
         if (Build.VERSION.SDK_INT >= 28 && request.isRequestingRtt) {
             rttTextStream = request.rttTextStream
             Log.v(TAG, "isRequestingRtt=${request.isRequestingRtt}, rttTextStream=${request.rttTextStream}")
