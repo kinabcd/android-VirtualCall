@@ -44,5 +44,7 @@ class CallViewHolder(view: View) : BaseViewHolder(view) {
         }
         requestVideo.setOnClickListener { call?.toggleRxVideo() }
         requestVideo.setOnLongClickListener { call?.requestVideo(); true }
+        pullCall.setOnClickListener { call?.pull() }
+        pushCall.setOnClickListener { call?.push() }
     }
 }
