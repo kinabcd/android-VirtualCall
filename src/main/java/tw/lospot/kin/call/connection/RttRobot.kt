@@ -2,12 +2,13 @@ package tw.lospot.kin.call.connection
 
 import android.annotation.TargetApi
 import android.os.Handler
+import android.os.Looper
 import android.os.Message
 import android.telecom.Connection
 
 @TargetApi(28)
 class RttRobot(private val rttTextStream: Connection.RttTextStream) : Handler.Callback {
-    private val handler = Handler(this)
+    private val handler = Handler(Looper.getMainLooper(), this)
     private var savedString = ""
     fun start() {
         handler.sendEmptyMessage(0)
@@ -17,7 +18,7 @@ class RttRobot(private val rttTextStream: Connection.RttTextStream) : Handler.Ca
         handler.removeMessages(0)
     }
 
-    override fun handleMessage(m: Message?): Boolean {
+    override fun handleMessage(m: Message): Boolean {
         val str = rttTextStream.readImmediately()
         if (str != null) {
             savedString += str
