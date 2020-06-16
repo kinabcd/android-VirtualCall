@@ -115,7 +115,7 @@ class InCallActivity : Activity(),
 
     private fun maybeRequestDrawOverlays() {
         // Overlay permission is used by BubbleOverlays. On Q devices, we show bubble with notification.
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q && !Settings.canDrawOverlays(this)) {
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q && !Settings.canDrawOverlays(this)) {
             Log.w(this, "checkDrawOverlays failed")
             startActivityForResult(
                     Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")),
