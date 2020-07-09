@@ -39,16 +39,20 @@ class VideoProvider(private val context: Context, private val connection: Connec
                 field = new
                 Log.v(this, "displaySurface $old -> $new")
 
+                mediaPlayer?.let {
+                    if (it.isPlaying) {
+                        it.stop()
+                        it.setSurface(null)
+                        it.release()
+                    }
+                }
                 if (new != null) {
-                    changePeerDimensions(mediaPlayer.videoWidth, mediaPlayer.videoHeight)
-                    mediaPlayer.setSurface(new)
-                    mediaPlayer.setVideoScalingMode(MediaPlayer.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING)
-                    mediaPlayer.isLooping = true
-                    mediaPlayer.start()
-                } else {
-                    mediaPlayer.setSurface(null)
-                    if (mediaPlayer.isPlaying) {
-                        mediaPlayer.stop()
+                    mediaPlayer = MediaPlayer.create(context, R.raw.chino).also {
+                        changePeerDimensions(it.videoWidth, it.videoHeight)
+                        it.setSurface(new)
+                        it.setVideoScalingMode(MediaPlayer.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING)
+                        it.isLooping = true
+                        it.start()
                     }
                 }
             }
@@ -72,7 +76,7 @@ class VideoProvider(private val context: Context, private val connection: Connec
             }
         }
     }
-    private val mediaPlayer by lazy { MediaPlayer.create(context, R.raw.jino) }
+    private var mediaPlayer: MediaPlayer? = null
     override fun onSetPreviewSurface(surface: Surface?) {
         previewSurface = surface
     }
