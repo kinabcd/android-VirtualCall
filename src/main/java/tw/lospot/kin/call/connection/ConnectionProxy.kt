@@ -209,7 +209,7 @@ class ConnectionProxy(context: Context, request: ConnectionRequest) :
     override var videoState: Int = 0
         set(value) {
             field = value
-            telecomConnection.setVideoState(value)
+            telecomConnection.videoState = value
         }
     override var isWifiCall: Boolean
         @RequiresApi(25)
@@ -232,7 +232,7 @@ class ConnectionProxy(context: Context, request: ConnectionRequest) :
     init {
         Log.v(TAG, "request=$request")
         telecomConnection.videoProvider = videoProvider
-        telecomConnection.setVideoState(request.videoState)
+        videoState = request.videoState
         if (Build.VERSION.SDK_INT >= 28 && request.isRequestingRtt) {
             rttTextStream = request.rttTextStream
             Log.v(TAG, "isRequestingRtt=${request.isRequestingRtt}, rttTextStream=${request.rttTextStream}")
