@@ -13,9 +13,9 @@
         android:layout_width="40dp"
         android:layout_height="40dp"
         android:background="@null"
-        android:importantForAccessibility="no"
         android:padding="8dp"
         android:scaleType="centerInside"
+        android:contentDescription="@null"
         android:src="@drawable/phone_account_unregistered" />
 
     <TextView
@@ -33,6 +33,6 @@
         android:layout_width="16dp"
         android:layout_height="16dp"
         android:background="@null"
-        android:importantForAccessibility="no"
+        android:contentDescription="@string/delete_phone_account"
         android:src="@android:drawable/ic_menu_close_clear_cancel" />
 </LinearLayout>

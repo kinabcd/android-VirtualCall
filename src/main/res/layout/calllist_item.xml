@@ -24,7 +24,7 @@
             android:layout_width="32dp"
             android:layout_height="32dp"
             android:background="@null"
-            android:importantForAccessibility="no"
+            android:contentDescription="@string/answer_call"
             android:src="@drawable/ic_answer_call"
             android:tint="@android:color/holo_green_light" />
 
@@ -33,7 +33,7 @@
             android:layout_width="32dp"
             android:layout_height="32dp"
             android:background="@null"
-            android:importantForAccessibility="no"
+            android:contentDescription="@string/disconnect_call"
             android:src="@drawable/ic_end_call"
             android:tint="@android:color/holo_red_light" />
 
@@ -42,7 +42,7 @@
             android:layout_width="32dp"
             android:layout_height="32dp"
             android:background="@null"
-            android:importantForAccessibility="no"
+            android:contentDescription="@string/pull_call_from_external"
             android:src="@android:drawable/stat_sys_download" />
 
         <ImageButton
@@ -50,7 +50,7 @@
             android:layout_width="32dp"
             android:layout_height="32dp"
             android:background="@null"
-            android:importantForAccessibility="no"
+            android:contentDescription="@string/push_call_to_external"
             android:src="@android:drawable/stat_sys_upload"
             android:tint="#999" />
 
@@ -59,7 +59,7 @@
             android:layout_width="32dp"
             android:layout_height="32dp"
             android:background="@null"
-            android:importantForAccessibility="no"
+            android:contentDescription="@string/video_call"
             android:src="@android:drawable/presence_video_online" />
     </LinearLayout>
 

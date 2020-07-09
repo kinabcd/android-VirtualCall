@@ -39,8 +39,8 @@
             android:layout_height="32dp"
             android:layout_margin="8dp"
             android:background="@null"
-            android:importantForAccessibility="no"
             android:src="@drawable/incall_audio_outgoing"
+            android:contentDescription="@string/outgoing_call"
             android:tint="#999" />
 
         <ImageButton
@@ -49,8 +49,8 @@
             android:layout_height="32dp"
             android:layout_margin="8dp"
             android:background="@null"
-            android:importantForAccessibility="no"
             android:src="@drawable/incall_audio_incoming"
+            android:contentDescription="@string/incoming_call"
             android:tint="#999" />
 
         <Space
@@ -64,8 +64,8 @@
             android:layout_height="32dp"
             android:layout_margin="8dp"
             android:background="@null"
-            android:importantForAccessibility="no"
             android:src="@android:drawable/ic_menu_add"
+            android:contentDescription="@string/add_new_phone_account"
             android:tint="#999" />
     </LinearLayout>
 </RelativeLayout>

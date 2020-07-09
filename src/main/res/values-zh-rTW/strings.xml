@@ -8,4 +8,10 @@
 
     <string name="answer_call">接聽</string>
     <string name="disconnect_call">掛斷</string>
+    <string name="outgoing_call">撥出</string>
+    <string name="incoming_call">來電</string>
+    <string name="delete_phone_account">刪除</string>
+    <string name="pull_call_from_external">接聽遠端通話</string>
+    <string name="push_call_to_external">推成遠端通話</string>
+    <string name="add_new_phone_account">新增通話帳戶</string>
 </resources>

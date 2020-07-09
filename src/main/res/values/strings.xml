@@ -9,4 +9,11 @@
 
     <string name="answer_call">Answer</string>
     <string name="disconnect_call">Disconnect</string>
+    <string name="outgoing_call">Outgoing call</string>
+    <string name="incoming_call">Incoming call</string>
+    <string name="delete_phone_account">Delete</string>
+    <string name="pull_call_from_external">Pull call from external</string>
+    <string name="push_call_to_external">Push call to external</string>
+    <string name="video_call" />
+    <string name="add_new_phone_account">Add new phone account</string>
 </resources>
