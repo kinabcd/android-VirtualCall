@@ -13,5 +13,9 @@
     <string name="delete_phone_account">刪除</string>
     <string name="pull_call_from_external">接聽遠端通話</string>
     <string name="push_call_to_external">推成遠端通話</string>
+    <string name="upgrade_to_video_call">升級成視訊通話</string>
     <string name="add_new_phone_account">新增通話帳戶</string>
+    <string name="application_information">應用程式資訊</string>
+    <string name="application_version">版本</string>
+    <string name="author">作者</string>
 </resources>

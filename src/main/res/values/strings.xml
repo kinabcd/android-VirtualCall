@@ -14,6 +14,9 @@
     <string name="delete_phone_account">Delete</string>
     <string name="pull_call_from_external">Pull call from external</string>
     <string name="push_call_to_external">Push call to external</string>
-    <string name="video_call" />
+    <string name="upgrade_to_video_call">Upgrade to video call</string>
     <string name="add_new_phone_account">Add new phone account</string>
+    <string name="application_information">Application information</string>
+    <string name="application_version">Version</string>
+    <string name="author">Author</string>
 </resources>

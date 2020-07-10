@@ -67,5 +67,14 @@
             android:src="@android:drawable/ic_menu_add"
             android:contentDescription="@string/add_new_phone_account"
             android:tint="#999" />
+        <ImageButton
+            android:id="@+id/app_information"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_margin="8dp"
+            android:background="@null"
+            android:src="@android:drawable/ic_menu_info_details"
+            android:contentDescription="@string/application_information"
+            android:tint="#999" />
     </LinearLayout>
 </RelativeLayout>

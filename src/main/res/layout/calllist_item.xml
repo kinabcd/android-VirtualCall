@@ -59,7 +59,7 @@
             android:layout_width="32dp"
             android:layout_height="32dp"
             android:background="@null"
-            android:contentDescription="@string/video_call"
+            android:contentDescription="@string/upgrade_to_video_call"
             android:src="@android:drawable/presence_video_online" />
     </LinearLayout>
 

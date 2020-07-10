@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import tw.lospot.kin.call.connection.CallList
 import tw.lospot.kin.call.phoneaccount.PhoneAccountManager
+import tw.lospot.kin.call.toolkitinfo.InfoActivity
 import tw.lospot.kin.call.viewholder.NewCallDetail
 
 class InCallActivity : Activity(),
@@ -53,6 +54,9 @@ class InCallActivity : Activity(),
         findViewById<ImageView>(R.id.addPhoneAccount).apply {
             setOnClickListener { showNewAccountDialog() }
         }
+        findViewById<ImageView>(R.id.app_information).apply {
+            setOnClickListener { showApplicationInformation() }
+        }
         val requestPermission = ArrayList<String>(2)
         if (!checkCallPhonePermission()) {
             requestPermission.add(Manifest.permission.CALL_PHONE)
@@ -81,7 +85,7 @@ class InCallActivity : Activity(),
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        when(requestCode) {
+        when (requestCode) {
             CODE_REQUEST_PERMISSIONS -> {
                 if (!checkCallPhonePermission() || !checkReadPhoneStatePermission() || !checkCameraPermission()) {
                     finish()
@@ -95,7 +99,7 @@ class InCallActivity : Activity(),
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        when(requestCode) {
+        when (requestCode) {
             CODE_REQUEST_MANAGE_OVERLAY_PERMISSION -> {
                 if (!Settings.canDrawOverlays(this)) {
                     finish()
@@ -170,6 +174,10 @@ class InCallActivity : Activity(),
                 }
                 .setNegativeButton(android.R.string.cancel) { dialog, _ -> dialog.cancel() }
                 .show()
+    }
+
+    private fun showApplicationInformation() {
+        startActivity(Intent(applicationContext, InfoActivity::class.java))
     }
 
     private fun checkCallPhonePermission(): Boolean =

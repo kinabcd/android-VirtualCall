@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <Preference
+        android:key="application_version"
+        android:title="@string/application_version"
+        android:layout="@layout/simple_list_item"/>
+    <Preference
+        android:key="application_author"
+        android:title="@string/author"
+        android:summary="Kin Lo (kin@lospot.tw)"
+        android:layout="@layout/simple_list_item"/>
+</PreferenceScreen>
