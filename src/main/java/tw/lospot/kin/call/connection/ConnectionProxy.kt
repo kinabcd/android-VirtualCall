@@ -285,7 +285,6 @@ class ConnectionProxy(context: Context, request: ConnectionRequest) :
     }
 
     override fun disconnect(disconnectCause: DisconnectCause) {
-        videoState = VideoProfile.STATE_AUDIO_ONLY
         rttTextStream = null
         videoProvider.onSetPreviewSurface(null)
         videoProvider.onSetDisplaySurface(null)
