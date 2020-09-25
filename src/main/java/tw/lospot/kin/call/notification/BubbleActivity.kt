@@ -5,7 +5,6 @@ import android.os.Bundle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import tw.lospot.kin.call.InCallAdapter
-import tw.lospot.kin.call.Log
 import tw.lospot.kin.call.R
 import tw.lospot.kin.call.connection.Call
 import tw.lospot.kin.call.connection.CallList
@@ -21,7 +20,6 @@ class BubbleActivity : Activity(), Call.Listener {
         val callList = findViewById<RecyclerView>(R.id.callList)
         callList.adapter = adapter
         callList.layoutManager = LinearLayoutManager(this)
-        Log.v("AAAA","callId=$callId")
     }
 
     override fun onStart() {
