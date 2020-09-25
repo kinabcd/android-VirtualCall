@@ -34,8 +34,6 @@
 
         <activity
             android:name=".InCallActivity"
-            android:allowEmbedded="true"
-            android:documentLaunchMode="always"
             android:label="@string/title_in_call_manager"
             android:resizeableActivity="true"
             android:theme="@style/Theme.Toolkit">
@@ -53,6 +51,16 @@
         <activity
             android:name=".toolkitinfo.InfoActivity"
             android:label="@string/application_information" />
+        <activity
+            android:name=".notification.BubbleActivity"
+            android:allowEmbedded="true"
+            android:documentLaunchMode="always"
+            android:resizeableActivity="true"
+            android:theme="@style/Theme.Toolkit">
+            <intent-filter>
+                <action android:name="tw.lospot.kin.call.BubbleContent" />
+            </intent-filter>
+        </activity>
 
         <receiver
             android:name=".connection.InCallReceiver"

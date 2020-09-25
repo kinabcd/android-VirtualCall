@@ -1,61 +1,112 @@
 package tw.lospot.kin.call.notification
 
-import android.annotation.TargetApi
 import android.app.*
 import android.app.Notification.CATEGORY_CALL
 import android.content.Context
 import android.content.Intent
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Rect
-import android.graphics.drawable.Icon
+import android.net.Uri
 import android.os.Build
-import android.provider.Settings
 import android.telecom.Connection
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.app.Person
+import androidx.core.content.pm.ShortcutInfoCompat
+import androidx.core.content.pm.ShortcutManagerCompat
+import androidx.core.graphics.drawable.IconCompat
 import tw.lospot.kin.call.InCallActivity
 import tw.lospot.kin.call.R
 import tw.lospot.kin.call.connection.Call
 import tw.lospot.kin.call.connection.CallList
 import tw.lospot.kin.call.connection.InCallReceiver
+import tw.lospot.kin.call.connection.State
 
 class StatusBarNotifier(private val context: Context) : CallList.Listener {
     companion object {
         private const val NOTIFICATION_ID = 1
-        private const val GROUP_KEY = "tw.lospot.kin.call.bubble"
+        private const val GROUP_KEY = "calls"
         private const val CHANNEL_ID = "inCallChannel"
     }
 
-    private val notificationManager = context.getSystemService(NotificationManager::class.java)!!
+    private val notificationManager = NotificationManagerCompat.from(context)
     private val contentIntent by lazy { PendingIntent.getActivity(context, 0, Intent(context, InCallActivity::class.java), 0) }
-    private val bubbleIcon by lazy { createBubbleIcon() }
     private val bubbleSet = HashSet<Call>()
     override fun onCallListChanged() {
         val liveCalls = CallList.rootCalls
-        val shouldRemoved = bubbleSet.filter { !liveCalls.contains(it) }
+        val shouldRemoved = bubbleSet - liveCalls
+
+
+        ShortcutManagerCompat.removeDynamicShortcuts(context, shouldRemoved.map { "tel:${it.name}" })
+        ShortcutManagerCompat.addDynamicShortcuts(context, liveCalls.map { call ->
+            // This shortcut must be long-lived and have Person data attached for one or more persons
+            ShortcutInfoCompat.Builder(context, "tel:${call.name}")
+                    .setPerson(call.person())
+                    .setLongLived(true)
+                    .setShortLabel(call.name)
+                    .setIntent(Intent(context, InCallActivity::class.java).apply {
+                        action = Intent.ACTION_MAIN
+                    })
+                    .build()
+        })
+
         shouldRemoved.forEach {
             bubbleSet.remove(it)
             notificationManager.cancel("${it.id}", NOTIFICATION_ID)
         }
 
-
-        liveCalls.forEach {
-            bubbleSet.add(it)
-
-            val builder = NotificationHelper.createBuilder(context, CHANNEL_ID)
-            builder.apply {
+        liveCalls.forEach { call ->
+            bubbleSet.add(call)
+            val builder = NotificationCompat.Builder(context, CHANNEL_ID).apply {
                 setSmallIcon(R.drawable.notification_small_icon)
+                // If the app targets Android 11 or higher, the notification is associated with
+                // a valid long-lived dynamic or cached sharing shortcut.
+                setShortcutId("tel:${call.name}")
                 setCategory(CATEGORY_CALL)
                 setOngoing(true)
                 setGroup(GROUP_KEY)
-                setContentTitle(it.name)
-                createActions(it).forEach { action -> addAction(action) }
+                setContentTitle(call.name)
+                createActions(call).forEach { action -> addAction(action) }
+                addPerson("tel:${call.name}")
+                setStyle(createMessagingStyle(call)) // Notification must use MessagingStyle for bubble.
+                bubbleMetadata = createBubbleMetadata(call)
             }
-            notificationManager.notify("${it.id}", NOTIFICATION_ID, builder.build())
+            notificationManager.notify("${call.id}", NOTIFICATION_ID, builder.build())
         }
     }
 
+    private fun createMessagingStyle(call: Call): NotificationCompat.Style {
+        val person = call.person()
+        val style = NotificationCompat.MessagingStyle(person)
+                .setConversationTitle(call.name)
+                .setGroupConversation(call.isConference)
+        if (call.isConference) {
+            call.children.forEach { child ->
+                style.addMessage("Child", System.currentTimeMillis(), child.person())
+            }
+        } else {
+            style.addMessage("${State.find(call.state)}", System.currentTimeMillis(), person)
+        }
+        return style
+    }
+
+    private fun createBubbleMetadata(call: Call): NotificationCompat.BubbleMetadata {
+        val bubbleIntent = Intent("tw.lospot.kin.call.BubbleContent").apply {
+            setClass(context, BubbleActivity::class.java)
+            putExtra("callId", call.id)
+            data = Uri.fromParts("KinCall", "bubble", "${call.id}")
+        }
+        val bubblePendingIntent = PendingIntent.getActivity(context, 0, bubbleIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+        return NotificationCompat.BubbleMetadata.Builder()
+                .setIntent(bubblePendingIntent)
+                .setIcon(IconCompat.createWithResource(context, R.drawable.notification_small_icon))
+                .setAutoExpandBubble(false)
+                .build()
+    }
+
     fun setUp() {
-        NotificationHelper.createChannel(context, CHANNEL_ID, "Ongoing Call", NotificationManager.IMPORTANCE_DEFAULT)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(CHANNEL_ID, "Ongoing Call", NotificationManager.IMPORTANCE_DEFAULT)
+            notificationManager.createNotificationChannel(channel)
+        }
         if (context is Service) {
             context.startForeground(NOTIFICATION_ID, createSummaryNotification())
         }
@@ -69,7 +120,7 @@ class StatusBarNotifier(private val context: Context) : CallList.Listener {
         }
     }
 
-    private fun createActions(call: Call): List<Notification.Action> {
+    private fun createActions(call: Call): List<NotificationCompat.Action> {
         return when (call.state) {
             Connection.STATE_DIALING -> arrayListOf(
                     createAnswerAction(call.id),
@@ -81,9 +132,9 @@ class StatusBarNotifier(private val context: Context) : CallList.Listener {
         }
     }
 
-    private fun createAnswerAction(callId: Int): Notification.Action {
-        return Notification.Action.Builder(
-                Icon.createWithResource(context, R.drawable.ic_answer_call),
+    private fun createAnswerAction(callId: Int): NotificationCompat.Action {
+        return NotificationCompat.Action.Builder(
+                IconCompat.createWithResource(context, R.drawable.ic_answer_call),
                 context.getString(R.string.answer_call),
                 PendingIntent.getBroadcast(context,
                         callId,
@@ -93,9 +144,9 @@ class StatusBarNotifier(private val context: Context) : CallList.Listener {
         ).build()
     }
 
-    private fun createDisconnectAction(callId: Int): Notification.Action {
-        return Notification.Action.Builder(
-                Icon.createWithResource(context, R.drawable.ic_end_call),
+    private fun createDisconnectAction(callId: Int): NotificationCompat.Action {
+        return NotificationCompat.Action.Builder(
+                IconCompat.createWithResource(context, R.drawable.ic_end_call),
                 context.getString(R.string.disconnect_call),
                 PendingIntent.getBroadcast(context,
                         callId,
@@ -112,8 +163,7 @@ class StatusBarNotifier(private val context: Context) : CallList.Listener {
     }
 
     private fun createSummaryNotification(): Notification {
-        val builder = NotificationHelper.createBuilder(context, CHANNEL_ID)
-        builder.apply {
+        val builder = NotificationCompat.Builder(context, CHANNEL_ID).apply {
             setContentIntent(contentIntent)
             setSmallIcon(R.drawable.notification_small_icon)
             setCategory(CATEGORY_CALL)
@@ -122,35 +172,12 @@ class StatusBarNotifier(private val context: Context) : CallList.Listener {
             setGroupSummary(true)
             setContentTitle("InCall")
         }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && !Settings.canDrawOverlays(context)) {
-            val bubbleData = Notification.BubbleMetadata.Builder()
-                    .setDesiredHeight(600)
-                    .setIcon(bubbleIcon)
-                    .setIntent(contentIntent)
-                    .build()
-            val person = Person.Builder()
-                    .setBot(true)
-                    .setImportant(true)
-                    .build()
-            builder.apply {
-                setBubbleMetadata(bubbleData)
-                addPerson(person)
-            }
-        }
         return builder.build()
     }
 
-    @TargetApi(Build.VERSION_CODES.O)
-    private fun createBubbleIcon(): Icon {
-        val rawIcon = context.resources.getDrawable(R.drawable.ic_launcher_foreground, context.theme).apply {
-            bounds = Rect(0, 0, intrinsicWidth, intrinsicHeight)
-        }
-        val bitmap = Bitmap.createBitmap(rawIcon.intrinsicWidth, rawIcon.intrinsicHeight, Bitmap.Config.ARGB_8888)
-        Canvas(bitmap).apply {
-            drawColor(context.getColor(R.color.ic_launcher_background))
-            rawIcon.draw(this)
-        }
-        return Icon.createWithAdaptiveBitmap(bitmap)
-    }
+    private fun Call.person(): Person = Person.Builder()
+            .setName(name)
+            .setKey("Call_$id")
+            .setUri("tel:$name")
+            .build()
 }

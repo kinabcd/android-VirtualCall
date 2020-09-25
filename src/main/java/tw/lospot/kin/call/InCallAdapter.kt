@@ -26,20 +26,28 @@ class InCallAdapter : RecyclerView.Adapter<BaseViewHolder>() {
 
     private fun updateCallsByAccountId() {
         val newItems = ArrayList<Any>(calls.size + accounts.size)
-        accounts.forEach { account ->
-            newItems.add(account)
-            calls.asSequence()
-                    .filter { it.phoneAccountHandle == account.phoneAccountHandle }
-                    .filter { it.isConference || !it.hasParent }.toList()
-                    .forEach { parentCall ->
-                        newItems.add(parentCall)
-                        parentCall.children.forEach { childCall ->
-                            newItems.add(childCall)
-                        }
-                    }
+        if (accounts.isEmpty()) {
+            addCallItemsOfAccount(newItems, null)
+        } else {
+            accounts.forEach { account ->
+                newItems.add(account)
+                addCallItemsOfAccount(newItems, account)
+            }
         }
         items = newItems.toList()
         notifyDataSetChanged()
+    }
+
+    private fun addCallItemsOfAccount(newItems: MutableList<Any>, account: PhoneAccountHelper?) {
+        calls.asSequence()
+                .filter { account == null || it.phoneAccountHandle == account.phoneAccountHandle }
+                .filter { it.isConference || !it.hasParent }.toList()
+                .forEach { parentCall ->
+                    newItems.add(parentCall)
+                    parentCall.children.forEach { childCall ->
+                        newItems.add(childCall)
+                    }
+                }
     }
 
     override fun getItemViewType(position: Int): Int {

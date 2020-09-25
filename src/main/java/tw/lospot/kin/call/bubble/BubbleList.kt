@@ -2,6 +2,7 @@ package tw.lospot.kin.call.bubble
 
 import android.content.Context
 import android.graphics.Point
+import android.os.Build
 import android.provider.Settings
 import android.util.TypedValue
 import android.view.WindowManager
@@ -54,6 +55,10 @@ class BubbleList(val context: Context) : CallList.Listener {
     }
 
     fun setUp() {
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            // On R devices, we use notification.BubbleMetadata as our bubble implementation.
+            return
+        }
         CallList.addListener(this)
     }
 
