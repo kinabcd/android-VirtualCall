@@ -18,7 +18,7 @@ import android.view.Gravity.TOP
 import android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
 import android.view.WindowManager.LayoutParams.TYPE_PHONE
 import android.view.animation.OvershootInterpolator
-import kotlinx.android.synthetic.main.bubble.view.*
+import android.widget.TextView
 import tw.lospot.kin.call.Log
 import tw.lospot.kin.call.R
 import tw.lospot.kin.call.connection.Call
@@ -43,34 +43,26 @@ class Bubble(context: Context, private val call: Call) : Call.Listener {
     private val marginHorizontal = TypedValue.applyDimension(COMPLEX_UNIT_DIP, 8f, context.resources.displayMetrics).toInt()
     private val clickThreshold = TypedValue.applyDimension(COMPLEX_UNIT_DIP, 5f, context.resources.displayMetrics).toInt()
 
-    private val rootView by lazy { layoutInflater.inflate(R.layout.bubble, null, false) }
-    private val rootParam by lazy {
-        WindowManager.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    TYPE_APPLICATION_OVERLAY
-                } else {
-                    TYPE_PHONE
-                },
-                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
-                        or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
-                        or WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-                        or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
-                        or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
-                PixelFormat.TRANSPARENT)
+    private val rootParam = WindowManager.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                TYPE_APPLICATION_OVERLAY
+            } else {
+                TYPE_PHONE
+            },
+            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+                    or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
+                    or WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                    or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+                    or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            PixelFormat.TRANSPARENT)
+    private val rootView = layoutInflater.inflate(R.layout.bubble, null, false)
+    private val idView = rootView.findViewById<TextView>(R.id.callId).apply {
+        setOnClickListener { if (state == State.EXPANDED) collapse() else expand() }
+        setOnTouchListener(TouchEventProcessor())
     }
-    private val idView by lazy {
-        rootView.callId.apply {
-            setOnClickListener {
-                if (state == State.EXPANDED)
-                    collapse()
-                else
-                    expand()
-            }
-            setOnTouchListener(TouchEventProcessor())
-        }
-    }
+
     private var targetState = State.NONE
     private var state = State.NONE
     private var pending = false

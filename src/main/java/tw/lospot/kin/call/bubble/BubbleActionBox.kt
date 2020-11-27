@@ -7,16 +7,16 @@ import android.os.Build
 import android.view.*
 import android.view.animation.DecelerateInterpolator
 import androidx.recyclerview.widget.LinearLayoutManager
-import kotlinx.android.synthetic.main.bubble_action_box.view.*
+import androidx.recyclerview.widget.RecyclerView
 import tw.lospot.kin.call.R
 
 class BubbleActionBox(context: Context) {
     private val windowManager = context.getSystemService(WindowManager::class.java)
     private val layoutInflater = LayoutInflater.from(context)
     var actions
-        get() = adapter.actions
+        get() = bubbleAdapter.actions
         set(value) {
-            adapter.actions = value
+            bubbleAdapter.actions = value
         }
     var x
         get() = rootParam.x + width / 2
@@ -39,12 +39,14 @@ class BubbleActionBox(context: Context) {
             rootView.width
         }
 
-    private val adapter by lazy { BubbleActionAdapter(context) }
+    private val bubbleAdapter by lazy { BubbleActionAdapter(context) }
 
     private val rootView by lazy {
         layoutInflater.inflate(R.layout.bubble_action_box, null, false).apply {
-            actions.layoutManager = LinearLayoutManager(context)
-            actions.adapter = adapter
+            findViewById<RecyclerView>(R.id.actionList).apply {
+                layoutManager = LinearLayoutManager(context)
+                adapter = bubbleAdapter
+            }
         }
     }
 
