@@ -22,13 +22,18 @@ import tw.lospot.kin.call.connection.State
 
 class StatusBarNotifier(private val context: Context) : CallList.Listener {
     companion object {
-        private const val NOTIFICATION_ID = 1
+        private const val NOTIFICATION_ID = 1000
         private const val GROUP_KEY = "calls"
         private const val CHANNEL_ID = "inCallChannel"
     }
 
     private val notificationManager = NotificationManagerCompat.from(context)
-    private val contentIntent by lazy { PendingIntent.getActivity(context, 0, Intent(context, InCallActivity::class.java), 0) }
+    private val contentIntent by lazy {
+        PendingIntent.getActivity(
+            context, 0, Intent(context, InCallActivity::class.java),
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0
+        )
+    }
     private val bubbleSet = HashSet<Call>()
     override fun onCallListChanged() {
         val liveCalls = CallList.rootCalls
@@ -50,7 +55,7 @@ class StatusBarNotifier(private val context: Context) : CallList.Listener {
 
         shouldRemoved.forEach {
             bubbleSet.remove(it)
-            notificationManager.cancel("${it.id}", NOTIFICATION_ID)
+            notificationManager.cancel(NOTIFICATION_ID + it.id)
         }
 
         liveCalls.forEach { call ->
@@ -65,11 +70,13 @@ class StatusBarNotifier(private val context: Context) : CallList.Listener {
                 setGroup(GROUP_KEY)
                 setContentTitle(call.name)
                 createActions(call).forEach { action -> addAction(action) }
-                addPerson("tel:${call.name}")
+                addPerson(Person.Builder().apply {
+                    setUri("tel:${call.name}")
+                }.build())
                 setStyle(createMessagingStyle(call)) // Notification must use MessagingStyle for bubble.
                 bubbleMetadata = createBubbleMetadata(call)
             }
-            notificationManager.notify("${call.id}", NOTIFICATION_ID, builder.build())
+            notificationManager.notify(NOTIFICATION_ID + call.id, builder.build())
         }
     }
 
@@ -94,12 +101,15 @@ class StatusBarNotifier(private val context: Context) : CallList.Listener {
             putExtra("callId", call.id)
             data = Uri.fromParts("KinCall", "bubble", "${call.id}")
         }
-        val bubblePendingIntent = PendingIntent.getActivity(context, 0, bubbleIntent, PendingIntent.FLAG_UPDATE_CURRENT)
-        return NotificationCompat.BubbleMetadata.Builder()
-                .setIntent(bubblePendingIntent)
-                .setIcon(IconCompat.createWithResource(context, R.drawable.notification_small_icon))
-                .setAutoExpandBubble(false)
-                .build()
+        val bubblePendingIntent = PendingIntent.getActivity(
+            context, 0, bubbleIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or
+                    (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0)
+        )
+        val icon = IconCompat.createWithResource(context, R.drawable.notification_small_icon)
+        return NotificationCompat.BubbleMetadata.Builder(bubblePendingIntent, icon)
+            .setAutoExpandBubble(false)
+            .build()
     }
 
     fun setUp() {
@@ -139,7 +149,7 @@ class StatusBarNotifier(private val context: Context) : CallList.Listener {
                 PendingIntent.getBroadcast(context,
                         callId,
                         createSelfIntent(InCallReceiver.ACTION_ANSWER, callId),
-                        PendingIntent.FLAG_UPDATE_CURRENT
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                 )
         ).build()
     }
@@ -151,7 +161,7 @@ class StatusBarNotifier(private val context: Context) : CallList.Listener {
                 PendingIntent.getBroadcast(context,
                         callId,
                         createSelfIntent(InCallReceiver.ACTION_DISCONNECT, callId),
-                        PendingIntent.FLAG_UPDATE_CURRENT
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                 )
         ).build()
     }

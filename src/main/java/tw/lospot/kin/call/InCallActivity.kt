@@ -12,6 +12,7 @@ import android.provider.Settings
 import android.text.Editable
 import android.widget.EditText
 import android.widget.ImageView
+import androidx.annotation.RequiresApi
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import tw.lospot.kin.call.connection.CallList
@@ -67,6 +68,9 @@ class InCallActivity : Activity(),
         if (!checkCameraPermission()) {
             requestPermission.add(Manifest.permission.CAMERA)
         }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !checkReadPhoneNumbersPermission()) {
+            requestPermission.add(Manifest.permission.READ_PHONE_NUMBERS)
+        }
         if (requestPermission.size > 0) {
             requestPermissions(requestPermission.toTypedArray(), CODE_REQUEST_PERMISSIONS)
         } else {
@@ -87,7 +91,9 @@ class InCallActivity : Activity(),
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         when (requestCode) {
             CODE_REQUEST_PERMISSIONS -> {
-                if (!checkCallPhonePermission() || !checkReadPhoneStatePermission() || !checkCameraPermission()) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !checkReadPhoneNumbersPermission()) {
+                    finish()
+                } else if (!checkCallPhonePermission() || !checkReadPhoneStatePermission() || !checkCameraPermission()) {
                     finish()
                 } else {
                     maybeRequestDrawOverlays()
@@ -188,6 +194,10 @@ class InCallActivity : Activity(),
 
     private fun checkCameraPermission(): Boolean =
             checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun checkReadPhoneNumbersPermission(): Boolean =
+        checkSelfPermission(Manifest.permission.READ_PHONE_NUMBERS) == PackageManager.PERMISSION_GRANTED
 
     override fun onCallListChanged() {
         mAdapter.calls = CallList.getAllCalls().toList()
