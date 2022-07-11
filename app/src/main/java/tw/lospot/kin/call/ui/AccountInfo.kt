@@ -8,6 +8,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
@@ -22,6 +23,7 @@ import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.edit
@@ -278,8 +280,12 @@ fun AccountAddCallActionDetail(para: CallParameters, onChanged: (para: CallParam
         TextField(
             modifier = Modifier.fillMaxWidth(),
             label = { Text("Answer delay") }, value = para.answerDelay.toString(),
-            onValueChange = { onChanged(para.copy(answerDelay = it.toLongOrNull() ?: 0L)) },
+            onValueChange = {
+                val new = if (it.isEmpty()) 0L else it.toLongOrNull()
+                if (new != null) onChanged(para.copy(answerDelay = new))
+            },
             singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             colors = TextFieldDefaults.textFieldColors(
                 backgroundColor = Color.Transparent
             ),
@@ -287,8 +293,12 @@ fun AccountAddCallActionDetail(para: CallParameters, onChanged: (para: CallParam
         TextField(
             modifier = Modifier.fillMaxWidth(),
             label = { Text("Reject delay") }, value = para.rejectDelay.toString(),
-            onValueChange = { onChanged(para.copy(rejectDelay = it.toLongOrNull() ?: 0L)) },
+            onValueChange = {
+                val new = if (it.isEmpty()) 0L else it.toLongOrNull()
+                if (new != null) onChanged(para.copy(rejectDelay = new))
+            },
             singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             colors = TextFieldDefaults.textFieldColors(
                 backgroundColor = Color.Transparent
             ),
@@ -296,8 +306,12 @@ fun AccountAddCallActionDetail(para: CallParameters, onChanged: (para: CallParam
         TextField(
             modifier = Modifier.fillMaxWidth(),
             label = { Text("Disconnect delay") }, value = para.disconnectDelay.toString(),
-            onValueChange = { onChanged(para.copy(disconnectDelay = it.toLongOrNull() ?: 0L)) },
+            onValueChange = {
+                val new = if (it.isEmpty()) 0L else it.toLongOrNull()
+                if (new != null) onChanged(para.copy(disconnectDelay = new))
+            },
             singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             colors = TextFieldDefaults.textFieldColors(
                 backgroundColor = Color.Transparent
             ),
