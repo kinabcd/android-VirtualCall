@@ -7,11 +7,15 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.*
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.Divider
+import androidx.compose.material.OutlinedTextField
+import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,29 +53,9 @@ fun MainMenuScreen(navController: NavController) {
 
     var isEditing by remember { mutableStateOf(false) }
     Column(modifier = Modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .verticalScroll(rememberScrollState()),
-        ) {
-            controller.accounts.forEach { account ->
-                AccountInfo(account)
-                if (!isEditing) {
-                    account.calls.forEach { CallInfo(call = it) }
-                    AccountAddCallAction(account)
-                } else {
-                    AccountEditAction(account)
-                }
-                if (isEditing || account != controller.accounts.lastOrNull()) {
-                    Divider(modifier = Modifier.padding(12.dp))
-                }
-            }
-            if (isEditing) {
-                NewAccountPanel()
-            }
-        }
-        Divider(modifier = Modifier.padding(vertical = 8.dp))
-        Row(Modifier.padding(horizontal = 12.dp)) {
+        AccountList(controller.accounts, modifier = Modifier.weight(1f), isEditing)
+        Divider()
+        Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
             Spacer(modifier = Modifier.weight(1f))
             IconButton(
                 painter = painterResource(R.drawable.ic_layers),
@@ -104,6 +88,34 @@ fun MainMenuScreen(navController: NavController) {
                 painter = rememberVectorPainter(image = Icons.Default.Info),
                 onClick = { navController.navigate(APP_INFO) }
             )
+        }
+    }
+}
+
+@Composable
+fun AccountList(
+    accounts: MutableList<InCallController.PhoneAccount>,
+    modifier: Modifier = Modifier,
+    isEditing :Boolean = false,
+) {
+    LazyColumn(modifier = modifier) {
+        accounts.forEach { account ->
+            item(key = account.id) { AccountInfo(account) }
+            if (!isEditing) {
+                items(account.calls, key = { it.id }) { CallInfo(call = it) }
+                item { AccountAddCallAction(account) }
+            } else {
+                item { AccountEditAction(account) }
+            }
+            item { Spacer(modifier = Modifier.padding(bottom = 8.dp)) }
+        }
+        if (isEditing) {
+            if (accounts.isNotEmpty()) item {
+                Divider(modifier = Modifier.padding(start = 12.dp, end = 12.dp))
+            }
+
+            item { NewAccountPanel() }
+            item { Spacer(modifier = Modifier.padding(bottom = 8.dp)) }
         }
     }
 }

@@ -23,7 +23,7 @@
         android:icon="@mipmap/ic_launcher"
         android:label="@string/title_in_call_manager"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Toolkit"
+        android:theme="@style/Theme.Toolkit.NoActionBar"
         tools:ignore="GoogleAppIndexingWarning">
         <service
             android:name=".connection.ConnectionService"
@@ -39,7 +39,7 @@
             android:name=".InCallActivity"
             android:label="@string/title_in_call_manager"
             android:resizeableActivity="true"
-            android:theme="@style/Theme.Toolkit"
+            android:theme="@style/Theme.Toolkit.NoActionBar"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.telecom.action.CONFIGURE_PHONE_ACCOUNT" />
@@ -57,7 +57,7 @@
             android:allowEmbedded="true"
             android:documentLaunchMode="always"
             android:resizeableActivity="true"
-            android:theme="@style/Theme.Toolkit"
+            android:theme="@style/Theme.Toolkit.NoActionBar"
             android:exported="false">
             <intent-filter>
                 <action android:name="tw.lospot.kin.call.BubbleContent" />

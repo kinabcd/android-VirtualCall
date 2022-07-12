@@ -13,8 +13,8 @@ import androidx.compose.ui.unit.dp
 import tw.lospot.kin.call.ui.PageContent
 
 private val DarkColorPalette = darkColors(
-    primary = Color(0xFF213361),
-    primaryVariant = Color(0xFF000088.toInt()),
+    primary = Color(0xFF6385db),
+    primaryVariant = Color(0xFF202f57),
     onPrimary = Color(0xFFB4B4B4),
     secondary = Color(0xFF2B73CC),
     secondaryVariant = Color(0xFF2B73CC),
@@ -25,7 +25,7 @@ private val DarkColorPalette = darkColors(
 )
 
 private val LightColorPalette = lightColors(
-    primary = Color(0xFFEAF3FF),
+    primary = Color(0xFF6385db),
     primaryVariant = Color(0xFF4783FC),
     onPrimary = Color(0xFF0F1014),
     secondary = Color(0xFF358FFC),

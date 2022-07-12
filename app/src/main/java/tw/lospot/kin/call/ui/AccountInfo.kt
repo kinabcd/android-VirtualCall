@@ -45,7 +45,7 @@ fun AccountInfo(account: InCallController.PhoneAccount) {
         modifier = Modifier
             .height(50.dp)
             .fillMaxWidth()
-            .background(Color.LightGray)
+            .background(MaterialTheme.colors.primarySurface)
             .padding(horizontal = 12.dp)
     ) {
         Canvas(
