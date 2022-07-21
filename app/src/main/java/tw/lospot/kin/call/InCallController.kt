@@ -20,9 +20,14 @@ class InCallController(private val context: Context) {
         Manifest.permission.CALL_PHONE,
         Manifest.permission.READ_PHONE_STATE,
         Manifest.permission.CAMERA,
-    ) + if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-        arrayListOf(Manifest.permission.READ_PHONE_NUMBERS)
-    } else emptyList()
+    ).apply {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            add(Manifest.permission.READ_PHONE_NUMBERS)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
     val accounts = mutableStateListOf<PhoneAccount>()
 
     private val callListListener = object : CallList.Listener {
