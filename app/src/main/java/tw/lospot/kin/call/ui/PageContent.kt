@@ -38,7 +38,9 @@ fun PageContent(
         floatingActionButtonPosition = floatingActionButtonPosition,
     ) {
         Spacer(modifier = Modifier.height(8.dp))
-        content()
+        Box(modifier = Modifier.padding(it)) {
+            content()
+        }
     }
 }
 

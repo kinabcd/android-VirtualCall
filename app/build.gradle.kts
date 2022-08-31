@@ -6,7 +6,7 @@ val currentDate = Date()
 val sdf = SimpleDateFormat("yyyyMMdd")
 val kotlinVersion = getKotlinPluginVersion()
 val coreVersion = "1.8.0"
-val composeVersion = "1.1.1"
+val composeVersion = "1.2.1"
 val navVersion = "2.5.0"
 val lifecycleVersion = "2.5.0"
 val activityVersion = "1.5.0"
@@ -47,7 +47,7 @@ android {
         compose = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = composeVersion
+        kotlinCompilerExtensionVersion = "1.3.0"
     }
 }
 
