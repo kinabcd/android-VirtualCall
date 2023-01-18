@@ -65,8 +65,15 @@ class Call(val telecomCall: TelecomCall.Common) : TelecomCall.Listener {
         telecomCall.unhold()
     }
 
-    fun disconnect(disconnectCause: DisconnectCause = DisconnectCause(DisconnectCause.REMOTE)) {
-        telecomCall.disconnect(disconnectCause)
+    fun disconnect(disconnectCause: DisconnectCause = DisconnectCause(DisconnectCause.UNKNOWN)) {
+        if (disconnectCause.code != DisconnectCause.UNKNOWN) {
+            telecomCall.disconnect(disconnectCause)
+        } else {
+            telecomCall.disconnect(DisconnectCause(when(state) {
+                Connection.STATE_RINGING -> DisconnectCause.MISSED
+                else -> DisconnectCause.REMOTE
+            }))
+        }
     }
 
     val state: Int
