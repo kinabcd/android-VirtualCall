@@ -1,15 +1,8 @@
-import org.jetbrains.kotlin.gradle.plugin.getKotlinPluginVersion
 import java.util.Date
 import java.text.SimpleDateFormat
 
 val currentDate = Date()
 val sdf = SimpleDateFormat("yyyyMMdd")
-val kotlinVersion = getKotlinPluginVersion()
-val coreVersion = "1.8.0"
-val composeVersion = "1.2.1"
-val navVersion = "2.5.0"
-val lifecycleVersion = "2.5.0"
-val activityVersion = "1.5.0"
 
 plugins {
     id("com.android.application")
@@ -33,43 +26,48 @@ android {
             proguardFiles(getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro")
         }
     }
-    productFlavors {
-    }
 
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "11"
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
     buildFeatures {
         compose = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.3.0"
+        kotlinCompilerExtensionVersion = "1.4.0"
     }
 }
 
 dependencies {
-    implementation("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
-    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion")
-    implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
+    implementation("org.jetbrains.kotlin:kotlin-stdlib")
+    implementation("org.jetbrains.kotlin:kotlin-reflect")
 
+    val coreVersion = "1.9.0"
     implementation("androidx.core:core-ktx:$coreVersion")
+
+    val navVersion = "2.5.3"
     implementation("androidx.navigation:navigation-compose:$navVersion")
 
+    val lifecycleVersion = "2.5.1"
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:$lifecycleVersion")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:$lifecycleVersion")
 
+    val activityVersion = "1.6.1"
     implementation("androidx.activity:activity-ktx:$activityVersion")
     implementation("androidx.activity:activity-compose:$activityVersion")
 
-    implementation("androidx.compose.ui:ui:$composeVersion")
-    implementation("androidx.compose.material:material:$composeVersion")
-    implementation("androidx.compose.ui:ui-tooling-preview:$composeVersion")
-    implementation("androidx.compose.foundation:foundation:$composeVersion")
-    implementation("androidx.compose.foundation:foundation-layout:$composeVersion")
-    androidTestImplementation("androidx.compose.ui:ui-test-junit4:$composeVersion")
-    debugImplementation("androidx.compose.ui:ui-tooling:$composeVersion")
+    val composeBom = platform("androidx.compose:compose-bom:2023.01.00")
+    implementation(composeBom)
+    androidTestImplementation(composeBom)
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.material:material")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.compose.foundation:foundation")
+    implementation("androidx.compose.foundation:foundation-layout")
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-tooling")
 }
