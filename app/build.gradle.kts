@@ -18,6 +18,7 @@ android {
         targetSdk = 33
         versionCode = 3
         versionName = "2.0_${sdf.format(currentDate)}"
+        setProperty("archivesBaseName", rootProject.name)
     }
     buildTypes {
         getByName("release") {
