@@ -16,9 +16,9 @@ android {
         applicationId = "tw.lospot.kin.call"
         minSdk = 24
         targetSdk = 33
-        versionCode = 3
-        versionName = "2.0_${sdf.format(currentDate)}"
-        setProperty("archivesBaseName", rootProject.name)
+        versionCode = 4
+        versionName = "2.1_${sdf.format(currentDate)}"
+        setProperty("archivesBaseName", "${rootProject.name}-$versionName")
     }
     buildTypes {
         getByName("release") {
