@@ -6,14 +6,35 @@ import android.content.Context
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.telecom.*
-import android.telecom.Connection.*
+import android.telecom.CallAudioState
+import android.telecom.Conferenceable
+import android.telecom.Connection
+import android.telecom.Connection.CAPABILITY_CANNOT_DOWNGRADE_VIDEO_TO_AUDIO
+import android.telecom.Connection.CAPABILITY_CAN_PULL_CALL
+import android.telecom.Connection.CAPABILITY_CAN_UPGRADE_TO_VIDEO
+import android.telecom.Connection.CAPABILITY_SUPPORTS_VT_LOCAL_BIDIRECTIONAL
+import android.telecom.Connection.CAPABILITY_SUPPORTS_VT_REMOTE_BIDIRECTIONAL
+import android.telecom.Connection.PROPERTY_IS_EXTERNAL_CALL
+import android.telecom.Connection.RttTextStream
+import android.telecom.Connection.STATE_ACTIVE
+import android.telecom.Connection.STATE_RINGING
+import android.telecom.ConnectionRequest
+import android.telecom.DisconnectCause
+import android.telecom.PhoneAccountHandle
+import android.telecom.TelecomManager
+import android.telecom.VideoProfile
+import android.telecom.VideoProfile.STATE_RX_ENABLED
+import android.telecom.VideoProfile.STATE_TX_ENABLED
 import androidx.annotation.RequiresApi
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.launch
 import tw.lospot.kin.call.Log
-import java.util.*
+import java.util.LinkedList
+import java.util.Queue
 import java.util.regex.Pattern
+import kotlin.properties.Delegates
 
 /**
  * Connection emulator
@@ -21,14 +42,14 @@ import java.util.regex.Pattern
  */
 
 class ConnectionProxy(context: Context, request: ConnectionRequest) :
-        TelecomCall.Common {
+    TelecomCall {
     companion object {
         const val TAG = "ConnectionProxy"
     }
 
+    private val scope = MainScope()
+    override val id: Int = TelecomCall.callCount++
     val telecomConnection = object : Connection() {
-        private val mainHandler by lazy { Handler(Looper.getMainLooper()) }
-
         init {
             when (request.address?.schemeSpecificPart) {
                 "hidden" -> setAddress(null, TelecomManager.PRESENTATION_RESTRICTED)
@@ -37,72 +58,50 @@ class ConnectionProxy(context: Context, request: ConnectionRequest) :
                 else -> setAddress(request.address, TelecomManager.PRESENTATION_ALLOWED)
             }
             connectionCapabilities = connectionCapabilities
-                    .or(CAPABILITY_SUPPORT_HOLD)
-                    .or(CAPABILITY_HOLD)
-                    .or(CAPABILITY_MUTE)
-                    .or(CAPABILITY_RESPOND_VIA_TEXT)
-                    .or(CAPABILITY_CANNOT_DOWNGRADE_VIDEO_TO_AUDIO)
-            connectionProperties = connectionProperties
-                    .or(1 shl 3)
-            if (request.isRequestingRtt) {
+                .or(CAPABILITY_SUPPORT_HOLD)
+                .or(CAPABILITY_HOLD)
+                .or(CAPABILITY_MUTE)
+                .or(CAPABILITY_RESPOND_VIA_TEXT)
+                .or(CAPABILITY_CANNOT_DOWNGRADE_VIDEO_TO_AUDIO)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
                 connectionProperties = connectionProperties
-                        .or(PROPERTY_IS_RTT)
+                    .or(TelecomCall.PROPERTY_WIFI)
+                    .or(if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && request.isRequestingRtt) PROPERTY_IS_RTT else 0)
             }
         }
 
-        override fun onStateChanged(state: Int) {
-            notifyStateChanged()
-        }
-
+        override fun onStateChanged(state: Int) = notifyStateChanged()
         override fun onDisconnect() {
-            mainHandler.postDelayed({
+            scope.launch {
+                delay(callParameters.disconnectDelay)
                 disconnect(DisconnectCause(DisconnectCause.LOCAL))
-            }, disconnectDelay)
-
+            }
         }
 
-        override fun onAbort() {
-            disconnect(DisconnectCause(DisconnectCause.UNKNOWN))
-        }
-
-        override fun onHold() {
-            hold()
-        }
-
-        override fun onUnhold() {
-            unhold()
-        }
-
-        override fun onAnswer() {
-            onAnswer(VideoProfile.STATE_AUDIO_ONLY)
-        }
-
+        override fun onAbort() = disconnect(DisconnectCause(DisconnectCause.UNKNOWN))
+        override fun onHold() = hold()
+        override fun onUnhold() = unhold()
+        override fun onAnswer() = onAnswer(VideoProfile.STATE_AUDIO_ONLY)
         override fun onAnswer(vs: Int) {
-            mainHandler.postDelayed({
+            scope.launch {
+                delay(callParameters.answerDelay)
                 answer(vs)
-            }, answerDelay)
-
+            }
         }
 
-        override fun onReject() {
-            onReject(null)
-        }
-
+        override fun onReject() = onReject(null)
         override fun onReject(replyMessage: String?) {
-            mainHandler.postDelayed({
+            scope.launch {
+                delay(callParameters.rejectDelay)
                 disconnect(DisconnectCause(DisconnectCause.REJECTED))
-            }, rejectDelay)
+            }
         }
 
         override fun onCallEvent(event: String, extras: Bundle?) {
-            super.onCallEvent(event, extras)
             Log.v(TAG, "onCallEvent $event $extras")
         }
 
-        override fun onPullExternalCall() {
-            pullExternalCall()
-        }
-
+        override fun onPullExternalCall() = pullExternalCall()
         override fun onExtrasChanged(extras: Bundle) {
             Log.v(TAG, "onExtrasChanged $extras")
         }
@@ -113,12 +112,11 @@ class ConnectionProxy(context: Context, request: ConnectionRequest) :
 
         override fun onPlayDtmfTone(c: Char) {
             Log.v(TAG, "onPlayDtmfTone $c")
-            listener?.onPlayDtmfTone(c)
+            scope.launch { onPlayDtmfTone.emit(c) }
         }
 
         override fun onStopDtmfTone() {
             Log.v(TAG, "onStopDtmfTone")
-            super.onStopDtmfTone()
         }
 
         override fun onSeparate() {
@@ -178,33 +176,29 @@ class ConnectionProxy(context: Context, request: ConnectionRequest) :
             connectionProperties = connectionProperties.and(PROPERTY_IS_RTT.inv())
         }
     }
+    override val onStateChanged: MutableSharedFlow<Unit> = MutableSharedFlow()
+    override val onPlayDtmfTone: MutableSharedFlow<Char> = MutableSharedFlow()
 
     private var postDial: Queue<String> =
-            request.address.encodedSchemeSpecificPart.split(Pattern.compile(";|(%3B)")).let {
-                LinkedList(if (it.size > 1) it.subList(1, it.size) else emptyList())
-            }
+        request.address.encodedSchemeSpecificPart.split(Pattern.compile(";|(%3B)")).let {
+            LinkedList(if (it.size > 1) it.subList(1, it.size) else emptyList())
+        }
     override val phoneAccountHandle: PhoneAccountHandle = request.accountHandle
-    private var rttTextStream: RttTextStream? = null
-        set(value) {
-            if (field != value) {
-                field = value
-                rttRobot = if (value != null) {
-                    RttRobot(value)
-                } else {
-                    null
-                }
-            }
-        }
-    private var rttRobot: RttRobot? = null
-        set(value) {
-            field?.stop()
-            field = value
-            field?.start()
-        }
-    val videoProvider = VideoProvider(context, this)
-    override var listener: TelecomCall.Listener? = null
-
+    private var rttTextStream: RttTextStream? by Delegates.observable(null) { _, old, new ->
+        if (old != new) rttRobot = if (new != null) RttRobot(new) else null
+    }
+    private var rttRobot: RttRobot? by Delegates.observable(null) { _, old, new ->
+        old?.stop()
+        new?.start()
+    }
+    private val videoProvider = VideoProvider(context, this)
     override val conferenceable: Conferenceable get() = telecomConnection
+    override var conferenceables: List<Conferenceable>
+        get() = telecomConnection.conferenceables
+        set(value) {
+            telecomConnection.conferenceables = value
+        }
+    override val name: String get() = telecomConnection.address?.schemeSpecificPart ?: "Empty"
     override val state: Int get() = telecomConnection.state
     override var videoState: Int = 0
         set(value) {
@@ -212,22 +206,22 @@ class ConnectionProxy(context: Context, request: ConnectionRequest) :
             telecomConnection.videoState = value
         }
     override var isWifiCall: Boolean
-        @RequiresApi(25)
         get() = hasProperty(TelecomCall.PROPERTY_WIFI)
-        @RequiresApi(25)
-        set(value) {
-            setProperty(TelecomCall.PROPERTY_WIFI, value)
-        }
+        set(value) = setProperty(TelecomCall.PROPERTY_WIFI, value)
+
     override var isHdAudio: Boolean
-        @RequiresApi(25)
         get() = hasProperty(TelecomCall.PROPERTY_HIGH_DEF_AUDIO)
-        @RequiresApi(25)
-        set(value) {
-            setProperty(TelecomCall.PROPERTY_HIGH_DEF_AUDIO, value)
-        }
-    private val disconnectDelay: Long = request.extras.getLong(TelecomCall.EXTRA_DELAY_DISCONNECT, 0)
-    private val rejectDelay: Long = request.extras.getLong(TelecomCall.EXTRA_DELAY_REJECT, 0)
-    private val answerDelay: Long = request.extras.getLong(TelecomCall.EXTRA_DELAY_ANSWER, 0)
+        set(value) = setProperty(TelecomCall.PROPERTY_HIGH_DEF_AUDIO, value)
+
+    override val isConference: Boolean = false
+    override var isExternal: Boolean
+        @RequiresApi(Build.VERSION_CODES.N_MR1)
+        get() = hasProperty(PROPERTY_IS_EXTERNAL_CALL)
+        @RequiresApi(Build.VERSION_CODES.N_MR1)
+        set(value) = setProperty(PROPERTY_IS_EXTERNAL_CALL, value)
+    override val hasParent: Boolean get() = telecomConnection.conference != null
+    override val children: List<Connection> = emptyList()
+    private val callParameters = CallParameters(request.extras)
 
     init {
         Log.v(TAG, "request=$request")
@@ -235,29 +229,29 @@ class ConnectionProxy(context: Context, request: ConnectionRequest) :
         videoState = request.videoState
         if (Build.VERSION.SDK_INT >= 28 && request.isRequestingRtt) {
             rttTextStream = request.rttTextStream
-            Log.v(TAG, "isRequestingRtt=${request.isRequestingRtt}, rttTextStream=${request.rttTextStream}")
         }
 
         if (Build.VERSION.SDK_INT >= 25) {
-            isHdAudio = request.extras.getBoolean(TelecomCall.EXTRA_HIGH_DEF_AUDIO, false)
-            isWifiCall = request.extras.getBoolean(TelecomCall.EXTRA_WIFI, false)
+            isHdAudio = callParameters.isHdAudio
+            isWifiCall = callParameters.isWifi
         }
     }
 
     private fun notifyStateChanged() {
         telecomConnection.connectionCapabilities = when (state) {
             STATE_ACTIVE -> telecomConnection.connectionCapabilities
-                    .or(CAPABILITY_CAN_UPGRADE_TO_VIDEO)
-                    .or(CAPABILITY_SUPPORTS_VT_LOCAL_BIDIRECTIONAL)
-                    .or(CAPABILITY_SUPPORTS_VT_REMOTE_BIDIRECTIONAL)
-                    .and(CAPABILITY_CANNOT_DOWNGRADE_VIDEO_TO_AUDIO.inv())
+                .or(CAPABILITY_CAN_UPGRADE_TO_VIDEO)
+                .or(CAPABILITY_SUPPORTS_VT_LOCAL_BIDIRECTIONAL)
+                .or(CAPABILITY_SUPPORTS_VT_REMOTE_BIDIRECTIONAL)
+                .and(CAPABILITY_CANNOT_DOWNGRADE_VIDEO_TO_AUDIO.inv())
+
             else -> telecomConnection.connectionCapabilities
-                    .and(CAPABILITY_CAN_UPGRADE_TO_VIDEO.inv())
-                    .and(CAPABILITY_SUPPORTS_VT_LOCAL_BIDIRECTIONAL.inv())
-                    .and(CAPABILITY_SUPPORTS_VT_REMOTE_BIDIRECTIONAL.inv())
-                    .or(CAPABILITY_CANNOT_DOWNGRADE_VIDEO_TO_AUDIO)
+                .and(CAPABILITY_CAN_UPGRADE_TO_VIDEO.inv())
+                .and(CAPABILITY_SUPPORTS_VT_LOCAL_BIDIRECTIONAL.inv())
+                .and(CAPABILITY_SUPPORTS_VT_REMOTE_BIDIRECTIONAL.inv())
+                .or(CAPABILITY_CANNOT_DOWNGRADE_VIDEO_TO_AUDIO)
         }
-        listener?.onStateChanged(state)
+        scope.launch { onStateChanged.emit(Unit) }
     }
 
     private fun maybeSetPostDialWait() {
@@ -288,50 +282,66 @@ class ConnectionProxy(context: Context, request: ConnectionRequest) :
         rttTextStream = null
         videoProvider.onSetPreviewSurface(null)
         videoProvider.onSetDisplaySurface(null)
-        telecomConnection.setDisconnected(disconnectCause)
+        telecomConnection.setDisconnected(
+            when {
+                disconnectCause.code != DisconnectCause.UNKNOWN -> disconnectCause
+                else -> when (state) {
+                    STATE_RINGING -> DisconnectCause(DisconnectCause.MISSED)
+                    else -> DisconnectCause(DisconnectCause.REMOTE)
+                }
+            }
+        )
         notifyStateChanged()
         telecomConnection.destroy()
     }
 
-    override fun isExternal(): Boolean =
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1 &&
-                    telecomConnection.connectionProperties.and(PROPERTY_IS_EXTERNAL_CALL) > 0
-
     override fun pullExternalCall() {
-        if (Build.VERSION.SDK_INT < 25) {
-            return
-        }
+        if (Build.VERSION.SDK_INT < 25) return
         telecomConnection.setPulling()
-        Handler().postDelayed({
+        scope.launch {
+            delay(1000)
             telecomConnection.connectionCapabilities = telecomConnection.connectionCapabilities
-                    .and(CAPABILITY_CAN_PULL_CALL.inv())
-            telecomConnection.connectionProperties = telecomConnection.connectionProperties
-                    .and(PROPERTY_IS_EXTERNAL_CALL.inv())
+                .and(CAPABILITY_CAN_PULL_CALL.inv())
+            isExternal = false
             telecomConnection.setActive()
-        }, 1000)
+        }
     }
 
     override fun pushInternalCall() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
-            telecomConnection.connectionCapabilities = telecomConnection.connectionCapabilities
-                    .or(CAPABILITY_CAN_PULL_CALL)
-            telecomConnection.connectionProperties = telecomConnection.connectionProperties
-                    .or(PROPERTY_IS_EXTERNAL_CALL)
-            notifyStateChanged()
-        }
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N_MR1) return
+        telecomConnection.connectionCapabilities = telecomConnection.connectionCapabilities
+            .or(CAPABILITY_CAN_PULL_CALL)
+        isExternal = true
+        notifyStateChanged()
     }
 
     override fun requestRtt() {
-        if (Build.VERSION.SDK_INT >= 28) {
-            telecomConnection.sendRemoteRttRequest()
+        if (Build.VERSION.SDK_INT < 28) return
+        telecomConnection.sendRemoteRttRequest()
+
+    }
+
+    override fun requestVideo(state: Int) {
+        if (videoState != state) {
+            val videoProfile = VideoProfile(state)
+            Log.v(this, "requestVideo $videoProfile")
+            val isRxUpgrade = (videoState.and(STATE_RX_ENABLED) < state.and(STATE_RX_ENABLED))
+            val isTxUpgrade = (videoState.and(STATE_TX_ENABLED) < state.and(STATE_TX_ENABLED))
+            if (isRxUpgrade || isTxUpgrade) {
+                videoProvider.receiveSessionModifyRequest(videoProfile)
+            } else {
+                videoState = state
+            }
         }
     }
 
-    @RequiresApi(25)
-    private fun hasProperty(property: Int) = telecomConnection.connectionProperties and property != 0
+    private fun hasProperty(property: Int): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N_MR1) return false
+        return telecomConnection.connectionProperties and property != 0
+    }
 
-    @RequiresApi(25)
     private fun setProperty(property: Int, on: Boolean) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N_MR1) return
         telecomConnection.connectionProperties = if (on) {
             telecomConnection.connectionProperties.or(property)
         } else {

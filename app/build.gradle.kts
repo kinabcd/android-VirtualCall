@@ -1,5 +1,5 @@
-import java.util.Date
 import java.text.SimpleDateFormat
+import java.util.Date
 
 val currentDate = Date()
 val sdf = SimpleDateFormat("yyyyMMdd")
@@ -11,11 +11,11 @@ plugins {
 
 android {
     namespace = "tw.lospot.kin.call"
-    compileSdk = 33
+    compileSdk = 34
     defaultConfig {
         applicationId = "tw.lospot.kin.call"
         minSdk = 24
-        targetSdk = 33
+        targetSdk = 34
         versionCode = 4
         versionName = "2.1_${sdf.format(currentDate)}"
         setProperty("archivesBaseName", "${rootProject.name}-$versionName")
@@ -29,18 +29,18 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = compileOptions.targetCompatibility.toString()
+        jvmTarget = "17"
     }
     buildFeatures {
         compose = true
         buildConfig = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.4.7"
+        kotlinCompilerExtensionVersion = "1.5.7"
     }
 }
 
@@ -48,22 +48,20 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 
-    implementation("androidx.core:core-ktx:1.10.1")
-    implementation("androidx.navigation:navigation-compose:2.5.3")
+    implementation("androidx.core:core-ktx:1.12.0")
+    implementation("androidx.navigation:navigation-compose:2.7.6")
 
-    val lifecycleVersion = "2.6.1"
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:$lifecycleVersion")
+    val lifecycleVersion = "2.6.2"
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:$lifecycleVersion")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:$lifecycleVersion")
 
-    val activityVersion = "1.7.0"
-    implementation("androidx.activity:activity-ktx:$activityVersion")
-    implementation("androidx.activity:activity-compose:$activityVersion")
+    implementation("androidx.activity:activity-compose:1.8.2")
 
-    val composeBom = platform("androidx.compose:compose-bom:2023.05.01")
+    val composeBom = platform("androidx.compose:compose-bom:2023.10.01")
     implementation(composeBom)
     androidTestImplementation(composeBom)
     implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.material:material")
+    implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.foundation:foundation-layout")

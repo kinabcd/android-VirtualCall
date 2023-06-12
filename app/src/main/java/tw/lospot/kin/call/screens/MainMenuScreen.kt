@@ -1,22 +1,34 @@
 package tw.lospot.kin.call.screens
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.Divider
-import androidx.compose.material.OutlinedTextField
-import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.runtime.*
+import androidx.compose.material3.Divider
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
@@ -25,35 +37,83 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import kotlinx.coroutines.flow.combine
 import tw.lospot.kin.call.BuildConfig
-import tw.lospot.kin.call.InCallController
 import tw.lospot.kin.call.R
+import tw.lospot.kin.call.connection.CallList
+import tw.lospot.kin.call.connection.CallSnapshot
 import tw.lospot.kin.call.navigation.APP_INFO
-import tw.lospot.kin.call.phoneaccount.PhoneAccountManager
-import tw.lospot.kin.call.ui.*
+import tw.lospot.kin.call.phoneaccount.PhoneAccountSnapshot
+import tw.lospot.kin.call.ui.AccountAddCallAction
+import tw.lospot.kin.call.ui.AccountEditAction
+import tw.lospot.kin.call.ui.AccountInfo
+import tw.lospot.kin.call.ui.CallInfo
+import tw.lospot.kin.call.ui.IconButton
+import tw.lospot.kin.call.ui.LocalPhoneAccountManager
+import tw.lospot.kin.call.ui.OnLifecycleEvent
+
+private val requiredPermission = arrayListOf(
+    Manifest.permission.CALL_PHONE,
+    Manifest.permission.READ_PHONE_STATE,
+    Manifest.permission.CAMERA,
+).apply {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        add(Manifest.permission.READ_PHONE_NUMBERS)
+    }
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        add(Manifest.permission.POST_NOTIFICATIONS)
+    }
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        add(Manifest.permission.RECORD_AUDIO)
+    }
+}.toTypedArray()
 
 @Composable
 fun MainMenuScreen(navController: NavController) {
     val context = LocalContext.current
-    val controller = remember { InCallController(context.applicationContext) }
+    val phoneAccountManager = LocalPhoneAccountManager.current
+    var missedPermission by remember { mutableStateOf(requiredPermission) }
+    fun updateMissedPermission() {
+        missedPermission = requiredPermission.filter {
+            context.checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED
+        }.toTypedArray()
+    }
+
     val requestMultiplePermissions = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
-    ) {
-        controller.refresh()
-    }
+    ) { updateMissedPermission() }
 
     OnLifecycleEvent { _, event ->
         when (event) {
-            Lifecycle.Event.ON_START -> controller.start(requestMultiplePermissions)
-            Lifecycle.Event.ON_STOP -> controller.stop()
+            Lifecycle.Event.ON_START -> {
+                updateMissedPermission()
+                if (missedPermission.isNotEmpty()) {
+                    requestMultiplePermissions.launch(missedPermission)
+                }
+            }
+
             else -> {}
         }
     }
+    if (missedPermission.isNotEmpty()) return
 
     var isEditing by remember { mutableStateOf(false) }
+    val accounts by remember {
+        combine(
+            phoneAccountManager.allAccounts, CallList.rootCalls
+        ) { accounts, rootCalls ->
+            accounts.map { account ->
+                AccountModel(
+                    account,
+                    rootCalls.sortedBy { it.id }.filter { it.accountHandle.id == account.id }
+                )
+            }
+        }
+    }.collectAsStateWithLifecycle(emptyList())
     Column(modifier = Modifier.fillMaxSize()) {
-        AccountList(controller.accounts, modifier = Modifier.weight(1f), isEditing)
+        AccountList(accounts, modifier = Modifier.weight(1f), isEditing)
         Divider()
         Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
             Spacer(modifier = Modifier.weight(1f))
@@ -94,13 +154,13 @@ fun MainMenuScreen(navController: NavController) {
 
 @Composable
 fun AccountList(
-    accounts: MutableList<InCallController.PhoneAccount>,
+    accounts: List<AccountModel>,
     modifier: Modifier = Modifier,
-    isEditing :Boolean = false,
+    isEditing: Boolean = false,
 ) {
     LazyColumn(modifier = modifier) {
         accounts.forEach { account ->
-            item(key = account.id) { AccountInfo(account) }
+            item(key = account.meta.id) { AccountInfo(account) }
             if (!isEditing) {
                 items(account.calls, key = { it.id }) { CallInfo(call = it) }
                 item { AccountAddCallAction(account) }
@@ -125,7 +185,8 @@ fun NewAccountPanel() {
     Row(
         modifier = Modifier.padding(horizontal = 12.dp)
     ) {
-        val context = LocalContext.current
+        val phoneAccountManager = LocalPhoneAccountManager.current
+        val allIds = phoneAccountManager.allIds.collectAsStateWithLifecycle(emptyList())
         var newId by remember { mutableStateOf("") }
         OutlinedTextField(
             modifier = Modifier
@@ -140,14 +201,14 @@ fun NewAccountPanel() {
             modifier = Modifier.align(Alignment.Bottom),
             painter = rememberVectorPainter(image = Icons.Default.Add),
             contentDescription = stringResource(id = android.R.string.ok),
-            onClick = {
-                when {
-                    newId.isBlank() -> {}
-                    PhoneAccountManager.getAllIds(context).contains(newId) -> {}
-                    else -> PhoneAccountManager.add(context, newId)
-                }
-            }
+            enabled = newId.isNotBlank() && newId !in allIds.value,
+            onClick = { phoneAccountManager.add(newId) }
         )
     }
 }
+
+data class AccountModel(
+    val meta: PhoneAccountSnapshot,
+    val calls: List<CallSnapshot>
+)
 

@@ -1,118 +1,39 @@
 package tw.lospot.kin.call.ui.theme
 
-import androidx.compose.foundation.background
+import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.*
-import androidx.compose.material.*
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import tw.lospot.kin.call.ui.PageContent
-
-private val DarkColorPalette = darkColors(
-    primary = Color(0xFF6385db),
-    primaryVariant = Color(0xFF202f57),
-    onPrimary = Color(0xFFB4B4B4),
-    secondary = Color(0xFF2B73CC),
-    secondaryVariant = Color(0xFF2B73CC),
-    onSecondary = Color(0xFFE6E6E6),
-    background = Color.Black,
-    surface = Color(0xFF222222.toInt()),
-    onSurface = Color(0xFFAAAAAA.toInt()),
-)
-
-private val LightColorPalette = lightColors(
-    primary = Color(0xFF6385db),
-    primaryVariant = Color(0xFF4783FC),
-    onPrimary = Color(0xFF0F1014),
-    secondary = Color(0xFF358FFC),
-    secondaryVariant = Color(0xFF358FFC),
-    background = Color.White,
-    surface = Color(0xFFFEFEFE.toInt()),
-    onSurface = Color(0xFF666666.toInt()),
-)
+import androidx.compose.ui.platform.LocalContext
 
 @Composable
 fun ToolkitTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
+    val context = LocalContext.current
     val colors = if (darkTheme) {
-        DarkColorPalette
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            dynamicDarkColorScheme(context)
+        } else {
+            darkColorScheme()
+        }
     } else {
-        LightColorPalette
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            dynamicLightColorScheme(context)
+        } else {
+            lightColorScheme()
+        }
     }
 
     MaterialTheme(
-        colors = colors,
-        typography = Typography,
+        colorScheme = colors,
         shapes = Shapes,
         content = content
     )
 }
 
-@Preview
-@Composable
-private fun PreviewThemeDark() {
-    PreviewTheme(true)
-}
-
-@Preview
-@Composable
-private fun PreviewThemeLight() {
-    PreviewTheme(false)
-}
-
-@Composable
-private fun PreviewTheme(darkTheme: Boolean = false) {
-    ToolkitTheme(darkTheme = darkTheme) {
-        PageContent(title = "Preview") {
-            Column {
-                ColorText("Primary", MaterialTheme.colors.primary)
-                ColorText("PrimaryVariant", MaterialTheme.colors.primaryVariant)
-                ColorText("Secondary", MaterialTheme.colors.secondary)
-                ColorText("SecondaryVariant", MaterialTheme.colors.secondaryVariant)
-                ColorText("Surface", MaterialTheme.colors.surface)
-                ColorText("Background", MaterialTheme.colors.background)
-                ColorText("Error", MaterialTheme.colors.error)
-                Divider(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(8.dp)
-                )
-                Row {
-                    Switch(checked = true, onCheckedChange = {})
-                    Switch(checked = false, onCheckedChange = {})
-                }
-                Row {
-                    OutlinedTextField(value = "Text", onValueChange = {})
-                    OutlinedTextField(enabled = false, value = "Text", onValueChange = {})
-                }
-                Row {
-                    Button(onClick = { }) { Text("Button") }
-                    Button(enabled = false, onClick = { }) { Text("Button") }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ColorText(text: String, color: Color) {
-    Box(
-        Modifier
-            .background(color)
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = text,
-            color = MaterialTheme.colors.contentColorFor(color)
-        )
-    }
-
-}

@@ -1,10 +1,15 @@
 package tw.lospot.kin.call.connection
 
-import android.telecom.*
+import android.telecom.Connection
+import android.telecom.ConnectionRequest
+import android.telecom.PhoneAccountHandle
+import android.telecom.RemoteConference
+import android.telecom.RemoteConnection
 import tw.lospot.kin.call.Log
 import tw.lospot.kin.call.bubble.BubbleList
 import tw.lospot.kin.call.notification.StatusBarNotifier
-import tw.lospot.kin.call.phoneaccount.PhoneAccountHelper
+import tw.lospot.kin.call.phoneaccount.PhoneAccountManager
+import tw.lospot.kin.call.phoneaccount.PhoneAccountManager.Companion.DEFAULT_ACCOUNT
 
 class ConnectionService : android.telecom.ConnectionService() {
 
@@ -22,29 +27,35 @@ class ConnectionService : android.telecom.ConnectionService() {
         bubbleList.cleanUp()
     }
 
-    override fun onCreateIncomingConnection(connectionManagerPhoneAccount: PhoneAccountHandle, request: ConnectionRequest): Connection {
+    override fun onCreateIncomingConnection(
+        connectionManagerPhoneAccount: PhoneAccountHandle,
+        request: ConnectionRequest
+    ): Connection {
         val connection = ConnectionProxy(applicationContext, request)
-        CallList.onCallAdded(Call(connection))
+        CallList.onCallAdded(connection)
         connection.telecomConnection.setRinging()
         return connection.telecomConnection
     }
 
-    override fun onCreateOutgoingConnection(connectionManagerPhoneAccount: PhoneAccountHandle, request: ConnectionRequest): Connection {
+    override fun onCreateOutgoingConnection(
+        connectionManagerPhoneAccount: PhoneAccountHandle,
+        request: ConnectionRequest
+    ): Connection {
         val connection = ConnectionProxy(applicationContext, request)
-        CallList.onCallAdded(Call(connection))
+        CallList.onCallAdded(connection)
         connection.telecomConnection.setDialing()
         return connection.telecomConnection
     }
 
     override fun onConference(connection1: Connection, connection2: Connection) {
         val phoneAccountHandle = CallList.getCall(connection1)?.phoneAccountHandle
-                ?: CallList.getCall(connection2)?.phoneAccountHandle
-                ?: PhoneAccountHelper(applicationContext).phoneAccountHandle
+            ?: CallList.getCall(connection2)?.phoneAccountHandle
+            ?: PhoneAccountManager(applicationContext).phoneAccountHandleFor(DEFAULT_ACCOUNT)
         val conference = ConferenceProxy(applicationContext, phoneAccountHandle)
         conference.telecomConference.addConnection(connection1)
         conference.telecomConference.addConnection(connection2)
         addConference(conference.telecomConference)
-        CallList.onCallAdded(Call(conference))
+        CallList.onCallAdded(conference)
         Log.d(this, "onConference")
     }
 

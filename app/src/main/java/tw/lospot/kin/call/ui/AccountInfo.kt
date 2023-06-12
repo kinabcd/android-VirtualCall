@@ -7,11 +7,27 @@ import androidx.activity.ComponentActivity
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.absolutePadding
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.AbsoluteAlignment
@@ -29,23 +45,23 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.edit
 import androidx.lifecycle.viewmodel.compose.viewModel
 import tw.lospot.kin.call.AccountViewModel
-import tw.lospot.kin.call.InCallController
 import tw.lospot.kin.call.R
-import tw.lospot.kin.call.phoneaccount.CallParameters
-import tw.lospot.kin.call.phoneaccount.PhoneAccountManager
+import tw.lospot.kin.call.connection.CallParameters
+import tw.lospot.kin.call.screens.AccountModel
 
 private const val TELECOM_PACKAGE_NAME = "com.android.server.telecom"
 private const val ENABLE_ACCOUNT_PREFERENCE =
     "com.android.server.telecom.settings.EnableAccountPreferenceActivity"
 
 @Composable
-fun AccountInfo(account: InCallController.PhoneAccount) {
+fun AccountInfo(account: AccountModel) {
     val context = LocalContext.current
+    val phoneAccountManager = LocalPhoneAccountManager.current
     Row(
         modifier = Modifier
             .height(50.dp)
             .fillMaxWidth()
-            .background(MaterialTheme.colors.primarySurface)
+            .background(MaterialTheme.colorScheme.primaryContainer)
             .padding(horizontal = 12.dp)
     ) {
         Canvas(
@@ -53,8 +69,8 @@ fun AccountInfo(account: InCallController.PhoneAccount) {
                 .size(30.dp)
                 .align(Alignment.CenterVertically)
                 .clickable {
-                    account.register()
-                    if (!account.isSelfManaged) {
+                    val snapshot = phoneAccountManager.register(account.meta.id)
+                    if (!snapshot.isSelfManaged) {
                         val intent = Intent()
                             .setClassName(TELECOM_PACKAGE_NAME, ENABLE_ACCOUNT_PREFERENCE)
                         if (context.packageManager.queryIntentActivities(intent, 0).size > 0) {
@@ -66,8 +82,8 @@ fun AccountInfo(account: InCallController.PhoneAccount) {
                 },
             onDraw = {
                 when {
-                    !account.isRegistered -> drawCircle(color = Color.Gray)
-                    !account.isEnabled -> drawCircle(color = Color.Red)
+                    !account.meta.isRegistered -> drawCircle(color = Color.Gray)
+                    !account.meta.isEnabled -> drawCircle(color = Color.Red)
                     else -> drawCircle(color = Color.Green)
                 }
                 drawCircle(color = Color.White, style = Stroke(width = 2.dp.toPx()))
@@ -77,31 +93,29 @@ fun AccountInfo(account: InCallController.PhoneAccount) {
             modifier = Modifier
                 .align(Alignment.CenterVertically)
                 .weight(1f),
-            text = account.id
+            text = account.meta.id
         )
     }
 }
 
 @Composable
-fun AccountEditAction(account: InCallController.PhoneAccount) {
-    val context = LocalContext.current
+fun AccountEditAction(account: AccountModel) {
+    val phoneAccountManager = LocalPhoneAccountManager.current
     Row(
         modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 8.dp)
     ) {
         IconButton(
             painter = painterResource(id = R.drawable.ic_block),
             contentDescription = null,
-            onClick = {
-                account.unregister()
-            }
+            onClick = { phoneAccountManager.unregister(account.meta.id) }
         )
         Spacer(modifier = Modifier.width(8.dp))
         IconButton(
             painter = rememberVectorPainter(image = Icons.Default.Delete),
             contentDescription = null,
             onClick = {
-                account.unregister()
-                PhoneAccountManager.remove(context, account.id)
+                phoneAccountManager.unregister(account.meta.id)
+                phoneAccountManager.remove(account.meta.id)
             }
         )
     }
@@ -110,9 +124,11 @@ fun AccountEditAction(account: InCallController.PhoneAccount) {
 
 @Composable
 fun AccountAddCallAction(
-    account: InCallController.PhoneAccount,
-    vm: AccountViewModel = viewModel(AccountViewModel::class.java, key = account.id)
+    account: AccountModel,
+    vm: AccountViewModel = viewModel(AccountViewModel::class.java, key = account.meta.id)
 ) {
+    val phoneAccountManager = LocalPhoneAccountManager.current
+    val dialer = remember(phoneAccountManager) { phoneAccountManager.createDialer() }
     val context = LocalContext.current
     val pref = remember {
         context.getSharedPreferences("Connection", ComponentActivity.MODE_PRIVATE)
@@ -132,16 +148,14 @@ fun AccountAddCallAction(
         InfoCard(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(8.dp)) {
                 Row {
-                    TextField(
+                    OutlinedTextField(
                         modifier = Modifier
+                            .padding(bottom = 8.dp)
                             .weight(1f)
                             .align(Alignment.CenterVertically),
                         label = { Text("Number") }, value = vm.number,
                         onValueChange = onNumberChange,
                         singleLine = true,
-                        colors = TextFieldDefaults.textFieldColors(
-                            backgroundColor = Color.Transparent
-                        ),
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     IconButton(
@@ -150,7 +164,9 @@ fun AccountAddCallAction(
                         size = 48.dp,
                         modifier = Modifier.align(Alignment.CenterVertically),
                         onClick = {
-                            account.addOutgoingCall(context, vm.number, vm.para)
+                            phoneAccountManager.phoneAccountFor(account.meta.id)?.let {
+                                dialer.addOutgoingCall(it, vm.number, vm.para)
+                            }
                         }
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -160,7 +176,9 @@ fun AccountAddCallAction(
                         size = 48.dp,
                         modifier = Modifier.align(Alignment.CenterVertically),
                         onClick = {
-                            account.addIncomingCall(context, vm.number, vm.para)
+                            phoneAccountManager.phoneAccountFor(account.meta.id)?.let {
+                                dialer.addIncomingCall(it, vm.number, vm.para)
+                            }
                         },
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -277,7 +295,7 @@ fun AccountAddCallActionDetail(para: CallParameters, onChanged: (para: CallParam
                 }
             }
         }
-        TextField(
+        OutlinedTextField(
             modifier = Modifier.fillMaxWidth(),
             label = { Text("Answer delay") }, value = para.answerDelay.toString(),
             onValueChange = {
@@ -286,11 +304,8 @@ fun AccountAddCallActionDetail(para: CallParameters, onChanged: (para: CallParam
             },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            colors = TextFieldDefaults.textFieldColors(
-                backgroundColor = Color.Transparent
-            ),
         )
-        TextField(
+        OutlinedTextField(
             modifier = Modifier.fillMaxWidth(),
             label = { Text("Reject delay") }, value = para.rejectDelay.toString(),
             onValueChange = {
@@ -299,11 +314,8 @@ fun AccountAddCallActionDetail(para: CallParameters, onChanged: (para: CallParam
             },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            colors = TextFieldDefaults.textFieldColors(
-                backgroundColor = Color.Transparent
-            ),
         )
-        TextField(
+        OutlinedTextField(
             modifier = Modifier.fillMaxWidth(),
             label = { Text("Disconnect delay") }, value = para.disconnectDelay.toString(),
             onValueChange = {
@@ -312,9 +324,6 @@ fun AccountAddCallActionDetail(para: CallParameters, onChanged: (para: CallParam
             },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            colors = TextFieldDefaults.textFieldColors(
-                backgroundColor = Color.Transparent
-            ),
         )
     }
 }

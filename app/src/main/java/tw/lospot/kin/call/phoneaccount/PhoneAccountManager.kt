@@ -1,52 +1,122 @@
 package tw.lospot.kin.call.phoneaccount
 
+import android.Manifest
+import android.content.ComponentName
 import android.content.Context
 import android.content.Context.MODE_PRIVATE
-import android.content.SharedPreferences
-import java.util.concurrent.CopyOnWriteArraySet
+import android.content.SharedPreferences.OnSharedPreferenceChangeListener
+import android.content.pm.PackageManager.PERMISSION_GRANTED
+import android.graphics.drawable.Icon
+import android.net.Uri
+import android.os.Build
+import android.telecom.PhoneAccount
+import android.telecom.PhoneAccount.CAPABILITY_SELF_MANAGED
+import android.telecom.PhoneAccountHandle
+import android.telecom.TelecomManager
+import androidx.core.content.edit
+import androidx.core.content.getSystemService
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.launch
+import tw.lospot.kin.call.R
+import tw.lospot.kin.call.connection.ConnectionService
 
-object PhoneAccountManager {
-    private const val ACCOUNT_PREFERENCES_NAME = "ACCOUNT"
-    private const val ACCOUNT_ID_SET = "IDS"
-    private val sListeners = CopyOnWriteArraySet<Listener>()
-
-    fun addListener(listener: Listener) {
-        sListeners.add(listener)
+class PhoneAccountManager(private val context: Context) {
+    companion object {
+        private const val ACCOUNT_PREFERENCES_NAME = "ACCOUNT"
+        private const val ACCOUNT_ID_SET = "IDS"
+        const val DEFAULT_ACCOUNT = "default@lospot.tw"
     }
 
-    fun removeListener(listener: Listener) {
-        sListeners.remove(listener)
+    private val telecomManager: TelecomManager = context.getSystemService()!!
+    private val pref = context.getSharedPreferences(ACCOUNT_PREFERENCES_NAME, MODE_PRIVATE)
+    val allIds = callbackFlow {
+        val callback = OnSharedPreferenceChangeListener { _, key ->
+            if (key == ACCOUNT_ID_SET) trySend(Unit)
+        }
+        pref.registerOnSharedPreferenceChangeListener(callback)
+        awaitClose { pref.unregisterOnSharedPreferenceChangeListener(callback) }
+    }.onStart { emit(Unit) }
+        .map { getAllIds() }
+    private val accountChanged = MutableSharedFlow<Unit>()
+    private val anyChanged = merge(flowOf(Unit), accountChanged)
+    val allAccounts = allIds.combine(anyChanged) { ids, _ -> ids.map { id -> snapshot(id) } }
+
+    fun add(id: String) {
+        pref.edit { putStringSet(ACCOUNT_ID_SET, (getAllIds() + id).toSet()) }
     }
 
-    fun getAll(context: Context): List<PhoneAccountHelper> {
-        return getAllIds(context).map { PhoneAccountHelper(context, it) }
+    fun remove(id: String) {
+        pref.edit { putStringSet(ACCOUNT_ID_SET, (getAllIds().filter { it != id }).toSet()) }
     }
 
-    fun add(context: Context, id: String) {
-        getSharedPreferences(context).edit()
-                .putStringSet(ACCOUNT_ID_SET, (getAllIds(context) + id).toSet())
-                .apply()
-        sListeners.forEach(Listener::onPhoneAccountListChanged)
+    fun register(id: String): PhoneAccountSnapshot {
+        val phoneAccountHandle = phoneAccountHandleFor(id)
+        val newPhoneAccount = PhoneAccount.builder(phoneAccountHandle, "LoSpot Telecom")
+            .setCapabilities(
+                PhoneAccount.CAPABILITY_CALL_PROVIDER
+                    .or(PhoneAccount.CAPABILITY_CONNECTION_MANAGER)
+                    .or(PhoneAccount.CAPABILITY_VIDEO_CALLING)
+                    .or(PhoneAccount.CAPABILITY_SUPPORTS_VIDEO_CALLING)
+                    .or(PhoneAccount.CAPABILITY_RTT)
+            )
+            .addSupportedUriScheme(PhoneAccount.SCHEME_SIP)
+            .addSupportedUriScheme(PhoneAccount.SCHEME_TEL)
+            .addSupportedUriScheme(PhoneAccount.SCHEME_VOICEMAIL)
+            .setIcon(Icon.createWithResource(context, R.mipmap.ic_launcher))
+            .setAddress(Uri.parse(id))
+            .setShortDescription(id)
+            .build()
+
+        telecomManager.registerPhoneAccount(newPhoneAccount)
+        reload()
+        return snapshot(id)
     }
 
-    fun remove(context: Context, id: String) {
-        getSharedPreferences(context).edit()
-                .putStringSet(ACCOUNT_ID_SET, (getAllIds(context).filter { it != id }).toSet())
-                .apply()
-        sListeners.forEach(Listener::onPhoneAccountListChanged)
-
+    fun unregister(id: String) {
+        val handle = phoneAccountHandleFor(id)
+        if (phoneAccountFor(handle) != null) {
+            telecomManager.unregisterPhoneAccount(handle)
+            reload()
+        }
     }
 
-    fun getAllIds(context: Context): List<String> {
-        return (getSharedPreferences(context).getStringSet(ACCOUNT_ID_SET, null)
-                ?: setOf("default@lospot.tw"))
-                .toList()
+    fun reload() {
+        MainScope().launch { accountChanged.emit(Unit) }
     }
 
-    private fun getSharedPreferences(context: Context): SharedPreferences =
-            context.getSharedPreferences(ACCOUNT_PREFERENCES_NAME, MODE_PRIVATE)
+    fun createDialer(): Dialer = Dialer(context, telecomManager)
 
-    interface Listener {
-        fun onPhoneAccountListChanged()
+    private fun getAllIds(): List<String> =
+        (pref.getStringSet(ACCOUNT_ID_SET, null) ?: setOf(DEFAULT_ACCOUNT)).toList()
+
+    fun phoneAccountHandleFor(id: String) =
+        PhoneAccountHandle(ComponentName(context, ConnectionService::class.java), id)
+
+    fun phoneAccountFor(id: String) = phoneAccountFor(phoneAccountHandleFor(id))
+    private fun phoneAccountFor(handle: PhoneAccountHandle) =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            when (context.checkSelfPermission(Manifest.permission.READ_PHONE_NUMBERS)) {
+                PERMISSION_GRANTED -> telecomManager.getPhoneAccount(handle)
+                else -> null
+            }
+        } else {
+            when (context.checkSelfPermission(Manifest.permission.READ_PHONE_STATE)) {
+                PERMISSION_GRANTED -> telecomManager.getPhoneAccount(handle)
+                else -> null
+            }
+        }
+
+    private fun snapshot(id: String): PhoneAccountSnapshot = phoneAccountFor(id).let { account ->
+        val state = account?.isEnabled?.let { if (it) 2 else 1 } ?: 0
+        val isSelfManaged = account?.hasCapabilities(CAPABILITY_SELF_MANAGED) ?: false
+        PhoneAccountSnapshot(id = id, state = state, isSelfManaged = isSelfManaged)
     }
 }

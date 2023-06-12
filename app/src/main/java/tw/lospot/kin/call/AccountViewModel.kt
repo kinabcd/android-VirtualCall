@@ -4,7 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
-import tw.lospot.kin.call.phoneaccount.CallParameters
+import tw.lospot.kin.call.connection.CallParameters
 
 class AccountViewModel : ViewModel() {
     var number by mutableStateOf("0987654321")

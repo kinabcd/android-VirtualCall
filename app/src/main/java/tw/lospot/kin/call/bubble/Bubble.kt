@@ -21,14 +21,15 @@ import android.view.animation.OvershootInterpolator
 import android.widget.TextView
 import tw.lospot.kin.call.Log
 import tw.lospot.kin.call.R
-import tw.lospot.kin.call.connection.Call
+import tw.lospot.kin.call.connection.CallSnapshot
+import tw.lospot.kin.call.connection.TelecomCall
 import kotlin.math.pow
 import kotlin.math.sqrt
 
 /**
  * Created by Kin_Lo on 2018/2/27.
  */
-class Bubble(context: Context, private val call: Call) : Call.Listener {
+class Bubble(context: Context, private val call: TelecomCall) {
 
     enum class State {
         NONE, SHOWN, EXPANDED
@@ -90,24 +91,24 @@ class Bubble(context: Context, private val call: Call) : Call.Listener {
         }
 
     fun show() {
-        Log.v(this, "show $call")
+        Log.v(this, "show ${call.id}")
         setTargetState(State.SHOWN)
     }
 
     fun hide() {
-        Log.v(this, "hide $call")
+        Log.v(this, "hide ${call.id}")
         setTargetState(State.NONE)
     }
 
     private fun expand() {
-        Log.v(this, "expand $call")
+        Log.v(this, "expand ${call.id}")
         setTargetState(State.EXPANDED)
 
     }
 
     private fun collapse() {
         if (targetState == State.EXPANDED) {
-            Log.v(this, "collapse $call")
+            Log.v(this, "collapse ${call.id}")
             setTargetState(State.SHOWN)
         }
     }
@@ -157,7 +158,6 @@ class Bubble(context: Context, private val call: Call) : Call.Listener {
         x = -rootView.measuredWidth / 2
         rootParam.gravity = TOP or LEFT
         windowManager.addView(rootView, rootParam)
-        call.addListener(this)
         isViewAdded = true
         moveToEdge {
             setState(State.SHOWN)
@@ -167,7 +167,6 @@ class Bubble(context: Context, private val call: Call) : Call.Listener {
     private fun startHide() {
         moveToOutOfEdge {
             windowManager.removeView(rootView)
-            call.removeListener(this)
             isViewAdded = false
             setState(State.NONE)
         }
@@ -280,7 +279,7 @@ class Bubble(context: Context, private val call: Call) : Call.Listener {
         }
     }
 
-    override fun onCallStateChanged(call: Call, newState: Int) {
+    fun onCallStateChanged(call: CallSnapshot, newState: Int) {
         updateViews()
     }
 
@@ -311,7 +310,7 @@ class Bubble(context: Context, private val call: Call) : Call.Listener {
             Icon.createWithResource(packageName, R.drawable.ic_upload),
             "Push to External"
         ) {
-            call.push()
+            call.pushInternalCall()
             collapse()
         }
     }
