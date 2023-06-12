@@ -94,9 +94,9 @@ class ConnectionProxy(context: Context, request: ConnectionRequest) :
             }, rejectDelay)
         }
 
-        override fun onCallEvent(event: String, extras: Bundle) {
+        override fun onCallEvent(event: String, extras: Bundle?) {
             super.onCallEvent(event, extras)
-            Log.v(TAG, "onCallEvent $event")
+            Log.v(TAG, "onCallEvent $event $extras")
         }
 
         override fun onPullExternalCall() {
