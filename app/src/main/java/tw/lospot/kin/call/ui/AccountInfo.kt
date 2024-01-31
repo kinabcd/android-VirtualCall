@@ -54,7 +54,10 @@ private const val ENABLE_ACCOUNT_PREFERENCE =
     "com.android.server.telecom.settings.EnableAccountPreferenceActivity"
 
 @Composable
-fun AccountInfo(account: AccountModel) {
+fun AccountInfo(
+    account: AccountModel,
+    modifier: Modifier = Modifier,
+) {
     val context = LocalContext.current
     val phoneAccountManager = LocalPhoneAccountManager.current
     Row(
@@ -63,6 +66,7 @@ fun AccountInfo(account: AccountModel) {
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.primaryContainer)
             .padding(horizontal = 12.dp)
+            .then(modifier)
     ) {
         Canvas(
             modifier = Modifier
@@ -99,10 +103,13 @@ fun AccountInfo(account: AccountModel) {
 }
 
 @Composable
-fun AccountEditAction(account: AccountModel) {
+fun AccountEditAction(
+    account: AccountModel,
+    modifier: Modifier = Modifier,
+) {
     val phoneAccountManager = LocalPhoneAccountManager.current
     Row(
-        modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 8.dp)
+        modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 8.dp).then(modifier)
     ) {
         IconButton(
             painter = painterResource(id = R.drawable.ic_block),
@@ -125,6 +132,7 @@ fun AccountEditAction(account: AccountModel) {
 @Composable
 fun AccountAddCallAction(
     account: AccountModel,
+    modifier: Modifier = Modifier,
     vm: AccountViewModel = viewModel(AccountViewModel::class.java, key = account.meta.id)
 ) {
     val phoneAccountManager = LocalPhoneAccountManager.current
@@ -144,6 +152,7 @@ fun AccountAddCallAction(
         modifier = Modifier
             .fillMaxWidth()
             .padding(start = 16.dp, end = 16.dp, top = 8.dp)
+            .then(modifier)
     ) {
         InfoCard(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(8.dp)) {

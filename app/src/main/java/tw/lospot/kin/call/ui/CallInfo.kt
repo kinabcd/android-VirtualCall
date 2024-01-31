@@ -21,11 +21,15 @@ import tw.lospot.kin.call.R
 import tw.lospot.kin.call.connection.CallSnapshot
 
 @Composable
-fun CallInfo(call: CallSnapshot) {
+fun CallInfo(
+    call: CallSnapshot,
+    modifier: Modifier = Modifier,
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(start = 16.dp, end = 16.dp, top = 8.dp)
+            .then(modifier)
     ) {
         InfoCard(modifier = Modifier.fillMaxWidth()) {
             CallInfoNoDecorate(call)

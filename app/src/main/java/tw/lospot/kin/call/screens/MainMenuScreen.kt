@@ -6,22 +6,29 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Divider
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,6 +44,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import kotlinx.coroutines.flow.combine
@@ -52,7 +60,6 @@ import tw.lospot.kin.call.ui.AccountInfo
 import tw.lospot.kin.call.ui.CallInfo
 import tw.lospot.kin.call.ui.IconButton
 import tw.lospot.kin.call.ui.LocalPhoneAccountManager
-import tw.lospot.kin.call.ui.OnLifecycleEvent
 
 private val requiredPermission = arrayListOf(
     Manifest.permission.CALL_PHONE,
@@ -85,21 +92,16 @@ fun MainMenuScreen(navController: NavController) {
         ActivityResultContracts.RequestMultiplePermissions()
     ) { updateMissedPermission() }
 
-    OnLifecycleEvent { _, event ->
-        when (event) {
-            Lifecycle.Event.ON_START -> {
-                updateMissedPermission()
-                if (missedPermission.isNotEmpty()) {
-                    requestMultiplePermissions.launch(missedPermission)
-                }
-            }
-
-            else -> {}
+    LifecycleEventEffect(Lifecycle.Event.ON_START) {
+        updateMissedPermission()
+        if (missedPermission.isNotEmpty()) {
+            requestMultiplePermissions.launch(missedPermission)
         }
     }
     if (missedPermission.isNotEmpty()) return
 
     var isEditing by remember { mutableStateOf(false) }
+    BackHandler(isEditing) { isEditing = false }
     val accounts by remember {
         combine(
             phoneAccountManager.allAccounts, CallList.rootCalls
@@ -152,38 +154,77 @@ fun MainMenuScreen(navController: NavController) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AccountList(
     accounts: List<AccountModel>,
     modifier: Modifier = Modifier,
     isEditing: Boolean = false,
 ) {
-    LazyColumn(modifier = modifier) {
+    LazyColumn(
+        modifier = modifier,
+    ) {
         accounts.forEach { account ->
-            item(key = account.meta.id) { AccountInfo(account) }
-            if (!isEditing) {
-                items(account.calls, key = { it.id }) { CallInfo(call = it) }
-                item { AccountAddCallAction(account) }
-            } else {
-                item { AccountEditAction(account) }
+            stickyHeader(key = account.meta.id) {
+                AccountInfo(account, Modifier.animateItemPlacement())
             }
-            item { Spacer(modifier = Modifier.padding(bottom = 8.dp)) }
+            item(key = account.meta.id + ":ACTION") {
+                AnimatedContent(
+                    modifier = Modifier
+                        .animateItemPlacement()
+                        .fillMaxWidth(),
+                    targetState = isEditing,
+                    label = account.meta.id + ":ACTION"
+                ) { isEditing ->
+                    if (isEditing) {
+                        AccountEditAction(account)
+                    } else {
+                        Column(Modifier.animateContentSize()) {
+                            account.calls.forEach { CallInfo(call = it) }
+                            AccountAddCallAction(account)
+                        }
+                    }
+                }
+            }
+            item(key = account.meta.id + ":SPACE") { Spacer(modifier = Modifier.height(8.dp)) }
         }
         if (isEditing) {
-            if (accounts.isNotEmpty()) item {
-                Divider(modifier = Modifier.padding(start = 12.dp, end = 12.dp))
-            }
-
-            item { NewAccountPanel() }
-            item { Spacer(modifier = Modifier.padding(bottom = 8.dp)) }
+            stickyHeader(key = "NEW") { NewAccountPanelHeader(Modifier.animateItemPlacement()) }
+            item(key = "NEW:ACTION") { NewAccountPanel(Modifier.animateItemPlacement()) }
+            item(key = "NEW:SPACE") { Spacer(modifier = Modifier.height(8.dp)) }
         }
     }
 }
 
 @Composable
-fun NewAccountPanel() {
+private fun NewAccountPanelHeader(
+    modifier: Modifier = Modifier,
+) {
     Row(
-        modifier = Modifier.padding(horizontal = 12.dp)
+        modifier = Modifier
+            .height(50.dp)
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.secondaryContainer)
+            .padding(horizontal = 12.dp)
+            .then(modifier)
+    ) {
+        Text(
+            modifier = Modifier
+                .align(Alignment.CenterVertically)
+                .weight(1f),
+            text = "New account"
+        )
+    }
+}
+
+@Composable
+private fun NewAccountPanel(
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = Modifier
+            .padding(horizontal = 12.dp)
+            .then(modifier)
     ) {
         val phoneAccountManager = LocalPhoneAccountManager.current
         val allIds = phoneAccountManager.allIds.collectAsStateWithLifecycle(emptyList())
