@@ -179,8 +179,10 @@ fun AccountList(
                     if (isEditing) {
                         AccountEditAction(account)
                     } else {
-                        Column(Modifier.animateContentSize()) {
-                            account.calls.forEach { CallInfo(call = it) }
+                        Column {
+                            Column(Modifier.animateContentSize()) {
+                                account.calls.forEach { CallInfo(call = it) }
+                            }
                             AccountAddCallAction(account)
                         }
                     }
